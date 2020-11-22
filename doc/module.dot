@@ -1,0 +1,90 @@
+digraph module {
+  ranksep = 2
+
+  # inputs/outputs
+  def [label="src/main/resources/configdefinitions/*.def"]
+  generated_sources [label="generated-sources/vespa-configgen-plugin"]
+  src_main_java [label="src/main/java"]
+  src_main_resources [label="src/main/resources"]
+  src_test_java [label="src/test/java"]
+  src_test_resources [label="src/test/resources"]
+  compile_jars [label="compile JARs"]
+  provided_jars [label="provided JARs"]
+  test_jars [label="test JARs"]
+  classes [label="classes"]
+  test_classes [label="test-classes"]
+  jar [label="JAR"]
+  jar_wdeps [label="JAR w/deps"]
+  jar_sources [label="source JAR"]
+  site [label="javadoc"]
+  jar_javadoc [label="javadoc JAR"]
+  abi [label="abi-check.json"]
+  pom [label="pom.xml"]
+  repo [label="~/.m2/repository"]
+
+  # processors
+  abicheck [shape=plaintext,label=":abicheck"]
+  assemble_container_plugin [shape=plaintext,label=":assemble-container-plugin"]
+  compile [shape=plaintext,label=":compile"]
+  generate_bundle_classpath_mappings [shape=plaintext,label=":generate-bundle-classpath-mappings"]
+  generate_osgi_manifest [shape=plaintext,label=":generate-osgi-manifest"]
+  generateSources [shape=plaintext,label=":generateSources"]
+  install [shape=plaintext,label=":install"]
+  gjar [shape=plaintext,label=":jar"]
+  jar_no_fork [shape=plaintext,label=":jar-no-fork"]
+  javadoc_no_fork [shape=plaintext,label=":javadoc-no-fork"]
+  resources [shape=plaintext,label=":resources"]
+  test [shape=plaintext,label=":test"]
+  testCompile [shape=plaintext,label=":testCompile"]
+  testResources [shape=plaintext,label=":testResources"]
+
+  abi -> abicheck
+  abicheck -> HALT
+  assemble_container_plugin -> jar
+  assemble_container_plugin -> jar_wdeps
+  classes -> assemble_container_plugin
+  classes -> generate_bundle_classpath_mappings
+  classes -> generate_osgi_manifest
+  classes -> test
+  compile_jars -> assemble_container_plugin
+  compile_jars -> compile
+  compile_jars -> generate_bundle_classpath_mappings
+  compile_jars -> generate_osgi_manifest
+  compile_jars -> testCompile
+  compile_jars -> test
+  compile -> classes
+  def -> generateSources
+  generateSources -> generated_sources
+  generate_bundle_classpath_mappings -> test_classes
+  generate_osgi_manifest -> classes
+  generated_sources -> compile
+  generated_sources -> jar_no_fork
+  generated_sources -> javadoc_no_fork
+  gjar -> jar_javadoc
+  install -> repo
+  jar -> abicheck
+  jar -> install
+  jar_no_fork -> jar_sources
+  javadoc_no_fork -> site
+  nonjars -> generate_osgi_manifest
+  pom -> install
+  provided_jars -> compile
+  provided_jars -> generate_bundle_classpath_mappings
+  provided_jars -> generate_osgi_manifest
+  provided_jars -> testCompile
+  provided_jars -> test
+  resources -> classes
+  site -> gjar
+  src_main_java -> compile
+  src_main_java -> jar_no_fork
+  src_main_java -> javadoc_no_fork
+  src_main_resources -> resources
+  src_test_java -> testCompile
+  src_test_resources -> testResources
+  test -> HALT
+  testCompile -> test_classes
+  testResources -> test_classes
+  test_classes -> test
+  test_jars -> testCompile
+  test_jars -> test
+}
