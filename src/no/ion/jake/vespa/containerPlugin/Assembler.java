@@ -59,7 +59,7 @@ public class Assembler {
                 .setManifestPath(classPathBuilder.getCompileDestinationDirectory().resolve("META-INF/MANIFEST.MF"))
                 .includeDirectory(classPathBuilder.getCompileDestinationDirectory());
 
-        archive(buildContext, withoutArchiver);
+        buildContext.run(withoutArchiver);
 
         JavaArchiver withArchiver = JavaArchiver.forCreating(buildContext.moduleContext(), jar)
                 .setPath("target/" + buildContext.moduleContext().mavenArtifact().artifactId() + withSuffix)
@@ -68,16 +68,10 @@ public class Assembler {
                 // TODO: Include compile scoped jars in dependencies/, and add to Bundle-ClassPath
                 ;
 
-        archive(buildContext, withArchiver);
+        buildContext.run(withArchiver);
     }
 
     public Path getJarPath() {
         return withoutArchiver.path();
-    }
-
-    private static void archive(BuildContext buildContext, JavaArchiver javaArchiver) {
-        JavaArchiverResult archivingResult = javaArchiver.archive(buildContext);
-        archivingResult.warning().ifPresent(buildContext::logWarning);
-        buildContext.logInfoFormat("built %s in %.3f s", javaArchiver.path().toString(), archivingResult.getSeconds());
     }
 }

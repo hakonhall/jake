@@ -2,10 +2,12 @@ package no.ion.jake.vespa.containerPlugin;
 
 import com.yahoo.container.plugin.osgi.GenerateOsgiManifest;
 import no.ion.jake.BuildContext;
-import no.ion.jake.ModuleContext;
+import no.ion.jake.build.Build;
+import no.ion.jake.build.BuildResult;
+import no.ion.jake.module.ModuleContext;
 import no.ion.jake.java.ClassPathBuilder;
 
-public class OsgiManifestGenerator {
+public class OsgiManifestGenerator implements Build {
     private final ModuleContext moduleContext;
 
     // TODO: Original has lots of sanity-checking that produces warnings
@@ -19,7 +21,8 @@ public class OsgiManifestGenerator {
     private boolean useArtifactVersionForExportPackages = false;
     private String bundleVersion;
     private String bundleSymbolicName;
-    private String importPackage;
+    private String importPackage = null;
+    private ClassPathBuilder classPathBuilder = null;
 
     public OsgiManifestGenerator(ModuleContext moduleContext) {
         this.moduleContext = moduleContext;
@@ -100,7 +103,13 @@ public class OsgiManifestGenerator {
         return this;
     }
 
-    public void build(BuildContext buildContext, ClassPathBuilder classPathBuilder) {
+    public OsgiManifestGenerator setClassPathBuilder(ClassPathBuilder classPathBuilder) {
+        this.classPathBuilder = classPathBuilder;
+        return this;
+    }
+
+    @Override
+    public BuildResult build(BuildContext buildContext) {
         ProjectImpl projectImpl = new ProjectImpl(moduleContext, classPathBuilder);
         LogImpl logImpl = new LogImpl(buildContext);
 
@@ -118,5 +127,7 @@ public class OsgiManifestGenerator {
                 .setImportPackage(importPackage);
 
         GenerateOsgiManifest.execute(params);
+
+        return BuildResult.of("wrote target/classes/META-INF/MANIFEST.MF");
     }
 }

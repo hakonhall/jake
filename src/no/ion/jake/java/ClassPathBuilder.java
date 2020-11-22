@@ -1,9 +1,8 @@
 package no.ion.jake.java;
 
-import no.ion.jake.ModuleContext;
+import no.ion.jake.module.ModuleContext;
 import no.ion.jake.maven.MavenArtifact;
 import no.ion.jake.maven.Scope;
-import no.ion.jake.vespa.YoleanModule;
 
 import java.nio.file.Path;
 import java.util.ArrayList;

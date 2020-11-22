@@ -3,7 +3,7 @@ package no.ion.jake.vespa.containerPlugin;
 import com.yahoo.container.plugin.api.Artifact2;
 import com.yahoo.container.plugin.api.Project;
 import com.yahoo.container.plugin.api.Version2;
-import no.ion.jake.ModuleContext;
+import no.ion.jake.module.ModuleContext;
 import no.ion.jake.java.ClassPathBuilder;
 import no.ion.jake.maven.MavenArtifact;
 import no.ion.jake.maven.Scope;

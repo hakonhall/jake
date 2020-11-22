@@ -1,15 +1,14 @@
 package no.ion.jake.java;
 
 import no.ion.jake.BuildContext;
-import no.ion.jake.ModuleContext;
+import no.ion.jake.build.Build;
+import no.ion.jake.module.ModuleContext;
 import no.ion.jake.util.Java;
-import no.ion.jake.util.Stopwatch;
 
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -17,7 +16,7 @@ import java.util.stream.Stream;
 
 import static no.ion.jake.util.Exceptions.uncheckIO;
 
-public class JavaArchiver {
+public class JavaArchiver implements Build {
     private final ModuleContext moduleContext;
     private final Jar jar;
     private final String mode;
@@ -43,7 +42,7 @@ public class JavaArchiver {
 
     /**
      * The path of the JAR file, possibly relative the module directory.
-     * Parent directories will be created if they do not exist (in {@link #archive(BuildContext)}).
+     * Parent directories will be created if they do not exist (in {@link #build(BuildContext)}).
      */
     public JavaArchiver setPath(Path outputPath) {
         this.path = outputPath;
@@ -80,7 +79,8 @@ public class JavaArchiver {
         return this;
     }
 
-    public JavaArchiverResult archive(BuildContext context) {
+    @Override
+    public JavaArchiverResult build(BuildContext context) {
         var jarArguments = new ArrayList<String>();
         jarArguments.add(mode);
 
@@ -117,12 +117,14 @@ public class JavaArchiver {
 
         context.logDebug(() -> "jar " + String.join(" ", jarArguments));
 
-        var runningStopwatch = Stopwatch.start();
         Jar.Result result = jar.run(jarArguments);
-        Duration duration = runningStopwatch.stop();
 
         if (result.code() == 0) {
-            return new JavaArchiverResult(result.out(), duration);
+            String warning = result.out();
+            if (!warning.isEmpty()) {
+                context.logWarning(warning);
+            }
+            return new JavaArchiverResult(result.out(), path);
         } else {
             throw new JavaArchiverException(result.out());
         }

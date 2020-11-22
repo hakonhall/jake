@@ -3,7 +3,7 @@ package no.ion.jake.vespa;
 import no.ion.jake.AbortException;
 import no.ion.jake.BuildContext;
 import no.ion.jake.LogSink;
-import no.ion.jake.ModuleContext;
+import no.ion.jake.module.ModuleContext;
 import no.ion.jake.Project;
 import no.ion.jake.java.Jar;
 import no.ion.jake.java.Javac;
@@ -24,18 +24,18 @@ public class Main {
 
     public static void main(String[] args) {
         try {
-            main2(args);
+            System.exit(main2(args));
         } catch (UserError userError) {
             System.err.println(userError.getMessage());
             System.exit(1);
-        } catch (AbortException ignored) {
+        } catch (RuntimeException e) {
+            // This should never happen...
+            e.printStackTrace();
             System.exit(1);
         }
-
-        System.exit(0);
     }
 
-    private static void main2(String[] args) {
+    private static int main2(String[] args) {
         Path projectPath = null;
         boolean verbose = false;
 
@@ -67,12 +67,7 @@ public class Main {
         projectPath = projectPath.toAbsolutePath();
         Project project = new Project(projectPath);
 
-        try {
-            new Main(project, verbose).run();
-            System.exit(0);
-        } catch (AbortException ignored) {
-            System.exit(1);
-        }
+        return new Main(project, verbose).run();
     }
 
     private Main(Project project, boolean verbose) {
@@ -80,7 +75,7 @@ public class Main {
         this.verbose = verbose;
     }
 
-    private void run() {
+    private int run() {
         LogSink logSink = new PrintStreamLogSink(System.out, verbose ? Level.FINEST : Level.INFO);
 
         // Our program would like to print progress to System.out and never write to err.
@@ -101,14 +96,22 @@ public class Main {
         System.setIn(InputStream.nullInputStream());
 
         try {
-            runWithOutAndErrRedirected(logSink);
+            return runWithOutAndErrRedirected(logSink);
+        } catch (AbortException e) {
+            if (!e.getMessage().isEmpty()) {
+                logSink.log(Level.SEVERE, e.getMessage(), null);
+            }
+            return 1;
+        } catch (RuntimeException e) {
+            logSink.log(Level.SEVERE, null, e);
+            return 1;
         } finally {
             System.setOut(originalOut);
             System.setErr(originalOut);
         }
     }
 
-    private void runWithOutAndErrRedirected(LogSink logSink) {
+    private int runWithOutAndErrRedirected(LogSink logSink) {
         Javac javac = new Javac();
         Jar jar = new Jar();
         Javadoc javadoc = new Javadoc();
@@ -129,6 +132,8 @@ public class Main {
         vespajlib.build(vespajlibBuildContext);
 
         logSink.log(Level.INFO, "SUCCESS", null);
+
+        return 0;
     }
 
     private void setOutAndCloseErr(LogSink logSink) {

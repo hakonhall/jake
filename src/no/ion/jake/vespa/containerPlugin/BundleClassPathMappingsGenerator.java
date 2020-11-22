@@ -2,12 +2,14 @@ package no.ion.jake.vespa.containerPlugin;
 
 import com.yahoo.container.plugin.bundle.GenerateBundleClassPathMappings;
 import no.ion.jake.BuildContext;
-import no.ion.jake.ModuleContext;
+import no.ion.jake.build.Build;
+import no.ion.jake.build.BuildResult;
+import no.ion.jake.module.ModuleContext;
 import no.ion.jake.java.ClassPathBuilder;
 
 import java.nio.file.Path;
 
-public class BundleClassPathMappingsGenerator {
+public class BundleClassPathMappingsGenerator implements Build {
     private final GenerateBundleClassPathMappings.Params params;
     private final ModuleContext moduleContext;
 
@@ -22,11 +24,12 @@ public class BundleClassPathMappingsGenerator {
                 .setBundleSymbolicName(moduleContext.name());
     }
 
-    public void build(BuildContext buildContext) {
+    @Override
+    public BuildResult build(BuildContext buildContext) {
         GenerateBundleClassPathMappings.execute(params);
-    }
 
-    public Path outputPath() {
-        return moduleContext.project().fileSystem().getPath("target/test-classes/bundle-plugin.bundle-classpath-mappings.json");
+        Path outputPath = moduleContext.project().fileSystem()
+                .getPath("target/test-classes/bundle-plugin.bundle-classpath-mappings.json");
+        return BuildResult.of("wrote " + outputPath);
     }
 }

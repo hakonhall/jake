@@ -1,17 +1,14 @@
 package no.ion.jake.vespa;
 
 import no.ion.jake.BuildContext;
-import no.ion.jake.ModuleContext;
+import no.ion.jake.module.ModuleContext;
 import no.ion.jake.io.ArtifactInstaller;
 import no.ion.jake.java.ClassPathBuilder;
 import no.ion.jake.java.Jar;
 import no.ion.jake.java.JavaArchiver;
-import no.ion.jake.java.JavaArchiverResult;
-import no.ion.jake.java.JavaCompilationResult;
 import no.ion.jake.java.JavaCompiler;
 import no.ion.jake.java.Javac;
 import no.ion.jake.javadoc.JavaDocumentation;
-import no.ion.jake.javadoc.JavaDocumentationResult;
 import no.ion.jake.javadoc.Javadoc;
 import no.ion.jake.junit4.JUnit4TestRunner;
 import no.ion.jake.maven.Scope;
@@ -108,7 +105,8 @@ public class VespajlibModule {
                 .setPath("target/" + moduleContext.mavenArtifact().artifactId() + "-javadoc.jar")
                 .includeDirectories("target/apidocs");
 
-        this.osgiManifestGenerator = new OsgiManifestGenerator(moduleContext);
+        this.osgiManifestGenerator = new OsgiManifestGenerator(moduleContext)
+                .setClassPathBuilder(classPathBuilder);
 
         // TODO: There is an updateReleaseInfo set to true for maven-isntall-plugin
         this.assembler = new Assembler(jar, classPathBuilder);
@@ -117,60 +115,24 @@ public class VespajlibModule {
     }
 
     public void build(BuildContext buildContext) {
-        compile(sourceCompiler, buildContext, "source");
-        compile(testSourceCompiler, buildContext, "test source");
-
-        timedRun(() -> mappingsGenerator.build(buildContext), buildContext,
-                "wrote " + mappingsGenerator.outputPath());
-
-        testRunner.build(buildContext);
-
-        timedRun(() -> osgiManifestGenerator.build(buildContext, classPathBuilder), buildContext, "wrote target/classes/META-INF/MANIFEST.MF");
-
-        JavaDocumentationResult javadocResult = javaDocumentation.build(buildContext);
-        if (!javadocResult.warning().isEmpty()) {
-            buildContext.logWarning(javadocResult.warning());
-        }
-        buildContext.logInfo(format("wrote javadoc to %s in %.3f s",
-                javaDocumentation.getDestinationDirectory(),
-                javadocResult.getSeconds()));
-
-        archive(buildContext, sourceJarArtifactArchiver);
-        archive(buildContext, javadocArchiver);
+        buildContext.run(sourceCompiler);
+        buildContext.run(testSourceCompiler);
+        buildContext.run(mappingsGenerator);
+        buildContext.run(testRunner);
+        buildContext.run(osgiManifestGenerator);
+        buildContext.run(javaDocumentation);
+        buildContext.run(sourceJarArtifactArchiver);
+        buildContext.run(javadocArchiver);
 
         assembler.build(buildContext);
 
-        timedRun(() -> abiChecker.build(buildContext, assembler.getJarPath()), buildContext, "ran abi-check");
+        abiChecker.setJarPath(assembler.getJarPath());
+        buildContext.run(abiChecker);
 
         ArtifactInstaller installer = new ArtifactInstaller(buildContext);
         installer.install(assembler.getJarPath(), moduleContext.mavenArtifact());
         installer.install("pom.xml", moduleContext.mavenArtifact().withPackaging("pom"));
         installer.install(sourceJarArtifactArchiver.path(), moduleContext.mavenArtifact().withClassifier("sources"));
         installer.install(javadocArchiver.path(), moduleContext.mavenArtifact().withClassifier("javadoc"));
-    }
-
-    private static void timedRun(Runnable runnable, BuildContext context, String description) {
-        var runningStopwatch = Stopwatch.start();
-        runnable.run();
-        double manifestGenerationSeconds = runningStopwatch.stop().toMillis() / 1000.0;
-        context.logInfo(format("%s in %.3f s", description, manifestGenerationSeconds));
-    }
-
-    private static void compile(JavaCompiler compilation, BuildContext context, String name) {
-        JavaCompilationResult result = compilation.compile(context);
-        result.warning().ifPresent(context::logWarning);
-        if (result.numFilesCompiled() > 0) {
-            context.logInfo(format("compiled %d %s files to %s in %.3f s",
-                    result.numFilesCompiled(),
-                    name,
-                    compilation.getDestinationDirectory(),
-                    result.getSeconds()));
-        }
-    }
-
-    private static void archive(BuildContext buildContext, JavaArchiver javaArchiver) {
-        JavaArchiverResult archivingResult = javaArchiver.archive(buildContext);
-        archivingResult.warning().ifPresent(buildContext::logWarning);
-        buildContext.logInfoFormat("built %s in %.3f s", javaArchiver.path().toString(), archivingResult.getSeconds());
     }
 }

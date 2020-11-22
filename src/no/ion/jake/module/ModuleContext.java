@@ -1,5 +1,7 @@
-package no.ion.jake;
+package no.ion.jake.module;
 
+import no.ion.jake.Project;
+import no.ion.jake.Version;
 import no.ion.jake.io.FileSet;
 import no.ion.jake.maven.MavenArtifact;
 
