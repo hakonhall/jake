@@ -1,5 +1,8 @@
 # jake
+
 Java make
+
+While jake currently only builds (parts of) Vespa, the idea is to extract the Vespa-related code to its own repository ("plugin").
 
 ## Performance
 
