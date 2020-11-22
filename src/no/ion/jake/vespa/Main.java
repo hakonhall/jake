@@ -36,7 +36,7 @@ public class Main {
     }
 
     private static int main2(String[] args) {
-        Path projectPath = null;
+        Path projectPath = Path.of(".");
         boolean verbose = false;
 
         for (int i = 0; i < args.length; ++i) {
@@ -59,9 +59,7 @@ public class Main {
             }
         }
 
-        if (projectPath == null) {
-            throw new UserError("missing required --project");
-        } else if (!Files.isDirectory(projectPath)) {
+        if (!Files.isDirectory(projectPath)) {
             throw new UserError("no such directory: " + projectPath);
         }
         projectPath = projectPath.toAbsolutePath();
