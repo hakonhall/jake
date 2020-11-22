@@ -1,7 +1,7 @@
 package no.ion.jake.vespa.abiCheckPlugin;
 
 import com.yahoo.abicheck.ProjectApi;
-import no.ion.jake.ModuleContext;
+import no.ion.jake.module.ModuleContext;
 
 import java.io.File;
 import java.nio.file.Path;

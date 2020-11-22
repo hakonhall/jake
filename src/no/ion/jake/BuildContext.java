@@ -1,5 +1,11 @@
 package no.ion.jake;
 
+import no.ion.jake.build.Build;
+import no.ion.jake.build.BuildResult;
+import no.ion.jake.module.ModuleContext;
+import no.ion.jake.util.Stopwatch;
+
+import java.time.Duration;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 
@@ -13,6 +19,22 @@ public class BuildContext {
     }
 
     public ModuleContext moduleContext() { return module; }
+
+    public void run(Build build) {
+        var runningStopwatch = Stopwatch.start();
+        BuildResult result = build.build(this);
+
+        if (result.noop()) {
+            String summary = result.summary();
+            logDebug(summary.isEmpty() ? "noop" : summary);
+        } else if (result.appendDuration()) {
+            Duration duration = runningStopwatch.stop();
+            String time = String.format(" in %.3f s", duration.toMillis() / 1000.0);
+            logInfo(result.summary() + time);
+        } else {
+            logInfo(result.summary());
+        }
+    }
 
     public void logSevereProblemAndExitJVM(String message) {
         logSink.log(Level.SEVERE, module.name() + " " + message, new RuntimeException(message));

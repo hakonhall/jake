@@ -1,29 +1,44 @@
 package no.ion.jake.java;
 
+import no.ion.jake.build.BuildResult;
+
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 
-public class JavaCompilationResult {
+import static java.lang.String.format;
+
+public class JavaCompilationResult implements BuildResult {
     private final int numFilesCompiled;
     private final Optional<String> warning;
-    private final Duration duration;
+    private final Path destinationDirectory;
 
-    public JavaCompilationResult(int numFilesCompiled, String warning, Duration duration) {
+    public JavaCompilationResult(int numFilesCompiled, String warning, Path destinationDirectory) {
         this.numFilesCompiled = numFilesCompiled;
         this.warning = warning == null || warning.isBlank() ? Optional.empty() : Optional.of(warning);
-        this.duration = duration;
+        this.destinationDirectory = destinationDirectory;
 
         if (numFilesCompiled < 0) {
             throw new IllegalArgumentException("numFilesCompiled is negative: " + numFilesCompiled);
         }
     }
 
+    @Override
+    public boolean noop() {
+        return numFilesCompiled == 0;
+    }
+
+    @Override
+    public String summary() {
+        if (numFilesCompiled > 0) {
+            return format("compiled %d file%s to %s", numFilesCompiled, numFilesCompiled == 1 ? "" : "s", destinationDirectory);
+        } else {
+            return "compiled no files";
+        }
+    }
+
     public int numFilesCompiled() { return numFilesCompiled; }
     public Optional<String> warning() { return warning; }
-    public Duration getDuration() { return duration; }
-    /** Get the time of compilation in seconds, truncated down to a whole millisecond. */
-    public double getSeconds() { return getMillis() / 1000.0; }
-    public long getMillis() { return duration.toMillis(); }
 
     @Override
     public String toString() {

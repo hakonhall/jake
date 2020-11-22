@@ -139,7 +139,7 @@ public class TestRun extends RunListener {
     }
 
     public static String getSummaryForZeroTests() {
-        return "ran 0 JUnit4 tests in 0.000 s";
+        return "ran 0 tests in 0.000 s";
     }
 
     public String getSummary() {

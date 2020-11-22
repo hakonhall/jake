@@ -1,8 +1,8 @@
 package no.ion.jake.java;
 
 import no.ion.jake.BuildContext;
-import no.ion.jake.ModuleContext;
-import no.ion.jake.util.Stopwatch;
+import no.ion.jake.build.Build;
+import no.ion.jake.module.ModuleContext;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -11,7 +11,6 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -23,7 +22,7 @@ import static no.ion.jake.util.Exceptions.uncheckIO;
 /**
  * A thread-UNSAFE builder for one or more sequential Java compilations.
  */
-public class JavaCompiler {
+public class JavaCompiler implements Build {
     private final Javac javac;
     private final FileSystem fileSystem;
     private final Path modulePath;
@@ -89,7 +88,8 @@ public class JavaCompiler {
         return this;
     }
 
-    public JavaCompilationResult compile(BuildContext context) throws JavaCompilationException {
+    @Override
+    public JavaCompilationResult build(BuildContext context) throws JavaCompilationException {
 
         var arguments = new ArrayList<String>(passthroughJavacArguments);
 
@@ -110,21 +110,22 @@ public class JavaCompiler {
 
         List<String> sourceFiles = findSourceFiles();
         if (sourceFiles.isEmpty()) {
-            return new JavaCompilationResult(0, null, Duration.ZERO);
+            return new JavaCompilationResult(0, null, destinationDirectory);
         }
         arguments.addAll(sourceFiles);
 
         context.logDebug(() -> "javac " + String.join(" ", arguments));
 
-        var runningStopwatch = Stopwatch.start();
         Javac.CompileResult result = javac.compile(arguments);
-        Duration duration = runningStopwatch.stop();
 
         if (result.code != 0) {
             throw new JavaCompilationException(result.message);
         }
 
-        return new JavaCompilationResult(sourceFiles.size(), result.message, duration);
+        var result2 = new JavaCompilationResult(sourceFiles.size(), result.message, destinationDirectory);
+
+        result2.warning().ifPresent(context::logWarning);
+        return result2;
     }
 
     private List<String> findSourceFiles() {

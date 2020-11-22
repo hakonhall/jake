@@ -2,9 +2,10 @@ package no.ion.jake.junit4;
 
 import no.ion.jake.AbortException;
 import no.ion.jake.BuildContext;
+import no.ion.jake.build.Build;
+import no.ion.jake.build.BuildResult;
 import no.ion.jake.container.Container;
 import no.ion.jake.java.ClassPath;
-import no.ion.jake.java.ClassPathBuilder;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -19,7 +20,7 @@ import java.util.function.Predicate;
 
 import static no.ion.jake.util.Exceptions.uncheckIO;
 
-public class JUnit4TestRunner {
+public class JUnit4TestRunner implements Build {
     private static final Set<String> PACKAGES_ACCESSIBLE_TO_UNIT_TESTS = Set.of(
             "no.ion.jake", "no.ion.jake.junit4", "no.ion.jake.util");
 
@@ -38,7 +39,8 @@ public class JUnit4TestRunner {
         return this;
     }
 
-    public void build(BuildContext buildContext) {
+    @Override
+    public BuildResult build(BuildContext buildContext) {
         if (testCompilationDestinationDirectory == null) {
             throw new IllegalStateException("testCompilationDestinationDirectory has not been set");
         }
@@ -87,9 +89,10 @@ public class JUnit4TestRunner {
                 buildContext,
                 testClassNames);
 
-        buildContext.logInfo(results.toString());
         if (!results.success()) {
-            throw new AbortException();
+            throw new AbortException(results.message());
         }
+
+        return BuildResult.of(false, results.message(), false);
     }
 }

@@ -1,20 +1,17 @@
 package no.ion.jake.vespa;
 
 import no.ion.jake.BuildContext;
-import no.ion.jake.ModuleContext;
+import no.ion.jake.module.ModuleContext;
 import no.ion.jake.io.ArtifactInstaller;
 import no.ion.jake.io.FileSet;
 import no.ion.jake.io.PathPattern;
 import no.ion.jake.java.ClassPathBuilder;
 import no.ion.jake.java.Jar;
 import no.ion.jake.java.JavaArchiver;
-import no.ion.jake.java.JavaArchiverResult;
 import no.ion.jake.java.JavaCompiler;
-import no.ion.jake.java.JavaCompilationResult;
 import no.ion.jake.java.JavaModule;
 import no.ion.jake.java.Javac;
 import no.ion.jake.javadoc.JavaDocumentation;
-import no.ion.jake.javadoc.JavaDocumentationResult;
 import no.ion.jake.javadoc.Javadoc;
 import no.ion.jake.junit4.JUnit4TestRunner;
 import no.ion.jake.maven.MavenArtifact;
@@ -132,23 +129,13 @@ public class TestutilModule implements JavaModule {
     }
 
     public void build(BuildContext buildContext) {
-        compile(sourceCompilation, buildContext, "source");
-        compile(testCompilation, buildContext, "test source");
-
-        testRunner.build(buildContext);
-
-        archive(buildContext, jarArtifactArchiver);
-        archive(buildContext, sourceJarArtifactArchiver);
-
-        JavaDocumentationResult javadocResult = javaDocumentation.build(buildContext);
-        if (!javadocResult.warning().isEmpty()) {
-            buildContext.logWarning(javadocResult.warning());
-        }
-        buildContext.logInfo(String.format("wrote javadoc to %s in %.3f s",
-                javaDocumentation.getDestinationDirectory(),
-                javadocResult.getSeconds()));
-
-        archive(buildContext, javadocArchiver);
+        buildContext.run(sourceCompilation);
+        buildContext.run(testCompilation);
+        buildContext.run(testRunner);
+        buildContext.run(jarArtifactArchiver);
+        buildContext.run(sourceJarArtifactArchiver);
+        buildContext.run(javaDocumentation);
+        buildContext.run(javadocArchiver);
 
         ArtifactInstaller installer = new ArtifactInstaller(buildContext);
         installer.install(jarArtifactArchiver.path(), moduleContext.mavenArtifact());
@@ -160,23 +147,5 @@ public class TestutilModule implements JavaModule {
     @Override
     public MavenArtifact jarMavenArtifact() {
         return moduleContext.mavenArtifact();
-    }
-
-    private static void compile(JavaCompiler compilation, BuildContext context, String name) {
-        JavaCompilationResult result = compilation.compile(context);
-        result.warning().ifPresent(context::logWarning);
-        if (result.numFilesCompiled() > 0) {
-            context.logInfo(String.format("compiled %d %s files to %s in %.3f s",
-                    result.numFilesCompiled(),
-                    name,
-                    compilation.getDestinationDirectory(),
-                    result.getSeconds()));
-        }
-    }
-
-    private static void archive(BuildContext buildContext, JavaArchiver javaArchiver) {
-        JavaArchiverResult archivingResult = javaArchiver.archive(buildContext);
-        archivingResult.warning().ifPresent(buildContext::logWarning);
-        buildContext.logInfoFormat("built %s in %.3f s", javaArchiver.path().toString(), archivingResult.getSeconds());
     }
 }

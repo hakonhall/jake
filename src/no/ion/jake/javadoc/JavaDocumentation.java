@@ -1,7 +1,9 @@
 package no.ion.jake.javadoc;
 
 import no.ion.jake.BuildContext;
-import no.ion.jake.ModuleContext;
+import no.ion.jake.build.Build;
+import no.ion.jake.build.BuildResult;
+import no.ion.jake.module.ModuleContext;
 import no.ion.jake.io.FileSet;
 import no.ion.jake.io.PathPattern;
 import no.ion.jake.java.ClassPath;
@@ -21,7 +23,7 @@ import java.util.stream.Collectors;
 
 import static no.ion.jake.util.Exceptions.uncheckIO;
 
-public class JavaDocumentation {
+public class JavaDocumentation implements Build {
     private final ModuleContext module;
     private final Javadoc javadoc;
     private final ClassPath classPath = new ClassPath();
@@ -76,7 +78,7 @@ public class JavaDocumentation {
         return this;
     }
 
-    public JavaDocumentationResult build(BuildContext buildContext) {
+    public BuildResult build(BuildContext buildContext) {
         var arguments = new ArrayList<String>();
 
         arguments.add("-cp");
@@ -149,7 +151,11 @@ public class JavaDocumentation {
         Duration duration = runningStopwatch.stop();
 
         if (result.code() == 0) {
-            return new JavaDocumentationResult(result.out(), duration);
+            String warning = result.out();
+            if (!warning.isEmpty()) {
+                buildContext.logWarning(warning);
+            }
+            return BuildResult.of("wrote javadoc to " + destinationDirectory);
         } else {
             throw new JavaDocumentationException(result.out());
         }
