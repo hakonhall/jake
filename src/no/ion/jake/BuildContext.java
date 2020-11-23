@@ -27,12 +27,14 @@ public class BuildContext {
         if (result.noop()) {
             String summary = result.summary();
             logDebug(summary.isEmpty() ? "noop" : summary);
-        } else if (result.appendDuration()) {
-            Duration duration = runningStopwatch.stop();
-            String time = String.format(" in %.3f s", duration.toMillis() / 1000.0);
-            logInfo(result.summary() + time);
-        } else {
-            logInfo(result.summary());
+        } else if (!result.summary().isEmpty()) {
+            if (result.appendDuration()) {
+                Duration duration = runningStopwatch.stop();
+                String time = String.format(" in %.3f s", duration.toMillis() / 1000.0);
+                logInfo(result.summary() + time);
+            } else {
+                logInfo(result.summary());
+            }
         }
     }
 

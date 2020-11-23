@@ -3,6 +3,8 @@ package no.ion.jake.maven;
 import no.ion.jake.UserError;
 import no.ion.jake.util.Java;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
@@ -70,8 +72,15 @@ public class MavenArtifact {
         return new MavenArtifact(groupId, artifactId, versionOrNull, classifierOrNull, packaging, scope);
     }
 
+    public String filename() {
+        return artifactId + '-' +
+                requireNonNull(versionOrNull, "missing version: unable to generate filename")
+                + (classifierOrNull == null ? "" : '-' + classifierOrNull) +
+                '.' + packaging;
+    }
+
     public String toRepoPath() {
-        requireNonNull(versionOrNull);
+        requireNonNull(versionOrNull, "missing version: required to generated repository path");
         var path = new StringBuilder()
                 .append(groupId.replace('.', '/'))
                 .append('/')
@@ -86,6 +95,27 @@ public class MavenArtifact {
             path.append('-').append(classifierOrNull);
         }
         path.append('.').append(packaging);
+        return path.toString();
+    }
+
+    /**
+     * Returns a URI subpath of the form group1/.../groupN/artifactId/version/artifactId-version[-classifier].packaging',
+     * with each segment being URI percent-encoded as necessary.
+     */
+    public String getUriSubpath() {
+        requireNonNull(versionOrNull, "missing version: required to generated repository path");
+
+        UriPathBuilder path = UriPathBuilder.ofSubpath()
+                .appendSegments(groupId.split("\\.", -1))
+                .appendSegment(artifactId)
+                .appendSegment(versionOrNull)
+                .appendSegment(artifactId)
+                .appendToSegment('-')
+                .appendToSegment(versionOrNull);
+        optionalClassifier().ifPresent(classifier -> path.appendToSegment('-').appendToSegment(classifier));
+        path.appendToSegment('.')
+                .appendToSegment(packaging);
+
         return path.toString();
     }
 

@@ -1,6 +1,8 @@
 package no.ion.jake.vespa;
 
 import no.ion.jake.BuildContext;
+import no.ion.jake.maven.MavenDownload;
+import no.ion.jake.maven.MavenRepository;
 import no.ion.jake.module.ModuleContext;
 import no.ion.jake.io.ArtifactInstaller;
 import no.ion.jake.io.FileSet;
@@ -32,6 +34,7 @@ import no.ion.jake.maven.Scope;
 public class TestutilModule implements JavaModule {
     private final ModuleContext moduleContext;
     private final ClassPathBuilder classPathBuilder;
+    private final MavenDownload lz4Download;
     private final JavaCompiler sourceCompilation;
     private final JavaCompiler testCompilation;
     private final JUnit4TestRunner testRunner;
@@ -40,8 +43,10 @@ public class TestutilModule implements JavaModule {
     private final JavaDocumentation javaDocumentation;
     private final JavaArchiver javadocArchiver;
 
-    public TestutilModule(ModuleContext moduleContext, Javac javac, Javadoc javadoc, Jar jar) {
+    public TestutilModule(ModuleContext moduleContext, Javac javac, Javadoc javadoc, Jar jar, MavenRepository mavenRepository) {
         this.moduleContext = moduleContext;
+
+        this.lz4Download = mavenRepository.scheduleDownloadOf(MavenArtifact.fromCoordinate("org.lz4:lz4-java:1.7.1"));
 
         this.classPathBuilder = new ClassPathBuilder(moduleContext)
                 .setDefaultScope(Scope.PROVIDED)
@@ -129,6 +134,7 @@ public class TestutilModule implements JavaModule {
     }
 
     public void build(BuildContext buildContext) {
+        buildContext.run(lz4Download);
         buildContext.run(sourceCompilation);
         buildContext.run(testCompilation);
         buildContext.run(testRunner);
@@ -138,10 +144,10 @@ public class TestutilModule implements JavaModule {
         buildContext.run(javadocArchiver);
 
         ArtifactInstaller installer = new ArtifactInstaller(buildContext);
-        installer.install(jarArtifactArchiver.path(), moduleContext.mavenArtifact());
-        installer.install("pom.xml", moduleContext.mavenArtifact().withPackaging("pom"));
-        installer.install(sourceJarArtifactArchiver.path(), moduleContext.mavenArtifact().withClassifier("sources"));
-        installer.install(javadocArchiver.path(), moduleContext.mavenArtifact().withClassifier("javadoc"));
+        buildContext.run(installer.of(jarArtifactArchiver.path(), moduleContext.mavenArtifact()));
+        buildContext.run(installer.of("pom.xml", moduleContext.mavenArtifact().withPackaging("pom")));
+        buildContext.run(installer.of(sourceJarArtifactArchiver.path(), moduleContext.mavenArtifact().withClassifier("sources")));
+        buildContext.run(installer.of(javadocArchiver.path(), moduleContext.mavenArtifact().withClassifier("javadoc")));
     }
 
     @Override

@@ -1,6 +1,8 @@
 package no.ion.jake.vespa.containerPlugin;
 
 import no.ion.jake.BuildContext;
+import no.ion.jake.build.Build;
+import no.ion.jake.build.BuildResult;
 import no.ion.jake.java.ClassPathBuilder;
 import no.ion.jake.java.Jar;
 import no.ion.jake.java.JavaArchiver;
@@ -11,7 +13,7 @@ import java.nio.file.Path;
 /**
  * Based on the bundle-plugin's AssembleContainerPlugin.
  */
-public class Assembler {
+public class Assembler implements Build {
     private final Jar jar;
     private final ClassPathBuilder classPathBuilder;
 
@@ -43,7 +45,8 @@ public class Assembler {
         return this;
     }
 
-    public void build(BuildContext buildContext) {
+    @Override
+    public BuildResult build(BuildContext buildContext) {
         final String withoutSuffix;
         final String withSuffix;
         if (useCommonAssemblyIds) {
@@ -69,6 +72,8 @@ public class Assembler {
                 ;
 
         buildContext.run(withArchiver);
+
+        return BuildResult.ofSilentSuccess();
     }
 
     public Path getJarPath() {

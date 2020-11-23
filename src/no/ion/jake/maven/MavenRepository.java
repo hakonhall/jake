@@ -1,9 +1,26 @@
 package no.ion.jake.maven;
 
-public interface MavenRepository {
-    /**
-     * The client requires the given artifact, and gets back a handle that can be used to locate the artifact
-     * once it is available.
-     */
-    MavenArtifactLocationHandle download(MavenArtifact artifact);
+import no.ion.jake.Project;
+
+import java.util.HashMap;
+
+public class MavenRepository {
+    private final Project project;
+    private final MavenCentral mavenCentral;
+
+    private final Object monitor = new Object();
+    private final HashMap<MavenArtifact, ArtifactHandle> artifacts = new HashMap<>();
+
+    public MavenRepository(Project project, MavenCentral mavenCentral) {
+        this.project = project;
+        this.mavenCentral = mavenCentral;
+    }
+
+    public MavenDownload scheduleDownloadOf(MavenArtifact artifact) {
+        return new MavenDownload(project, mavenCentral, artifact);
+    }
+
+    private ArtifactHandle getArtifactInfoLocked(MavenArtifact artifact) {
+        return artifacts.computeIfAbsent(artifact, __ -> new ArtifactHandle(project, artifact));
+    }
 }

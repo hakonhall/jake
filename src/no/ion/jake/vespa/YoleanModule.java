@@ -14,7 +14,6 @@ import no.ion.jake.javadoc.Javadoc;
 import no.ion.jake.junit4.JUnit4TestRunner;
 import no.ion.jake.maven.MavenArtifact;
 import no.ion.jake.maven.Scope;
-import no.ion.jake.util.Stopwatch;
 import no.ion.jake.vespa.abiCheckPlugin.AbiChecker;
 import no.ion.jake.vespa.containerPlugin.Assembler;
 import no.ion.jake.vespa.containerPlugin.BundleClassPathMappingsGenerator;
@@ -121,17 +120,16 @@ public class YoleanModule implements JavaModule {
         buildContext.run(javaDocumentation);
         buildContext.run(sourceJarArtifactArchiver);
         buildContext.run(javadocArchiver);
-
-        assembler.build(buildContext);
+        buildContext.run(assembler);
 
         abiChecker.setJarPath(assembler.getJarPath());
         buildContext.run(abiChecker);
 
         ArtifactInstaller installer = new ArtifactInstaller(buildContext);
-        installer.install(assembler.getJarPath(), moduleContext.mavenArtifact());
-        installer.install("pom.xml", moduleContext.mavenArtifact().withPackaging("pom"));
-        installer.install(sourceJarArtifactArchiver.path(), moduleContext.mavenArtifact().withClassifier("sources"));
-        installer.install(javadocArchiver.path(), moduleContext.mavenArtifact().withClassifier("javadoc"));
+        buildContext.run(installer.of(assembler.getJarPath(), moduleContext.mavenArtifact()));
+        buildContext.run(installer.of("pom.xml", moduleContext.mavenArtifact().withPackaging("pom")));
+        buildContext.run(installer.of(sourceJarArtifactArchiver.path(), moduleContext.mavenArtifact().withClassifier("sources")));
+        buildContext.run(installer.of(javadocArchiver.path(), moduleContext.mavenArtifact().withClassifier("javadoc")));
     }
 
     @Override
