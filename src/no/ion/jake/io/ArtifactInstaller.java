@@ -12,15 +12,11 @@ public class ArtifactInstaller {
         this.context = context;
     }
 
-    public ArtifactInstaller install(String path, MavenArtifact artifactId) {
-        return install(context.moduleContext().project().fileSystem().getPath(path), artifactId);
+    public ArtifactInstall of(String path, MavenArtifact artifactId) {
+        return of(context.moduleContext().project().fileSystem().getPath(path), artifactId);
     }
 
-    public ArtifactInstaller install(Path path, MavenArtifact artifactId) {
-        String repoPath = artifactId.toRepoPath();
-        Path toPath = context.moduleContext().project().pathToMavenRepository().resolve(repoPath);
-        Copy.copyFile(path, toPath).install(context);
-        context.logInfo("installed " + path + " as " + repoPath);
-        return this;
+    public ArtifactInstall of(Path path, MavenArtifact artifactId) {
+        return new ArtifactInstall(path, artifactId);
     }
 }

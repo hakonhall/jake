@@ -3,6 +3,10 @@ package no.ion.jake.vespa;
 import no.ion.jake.AbortException;
 import no.ion.jake.BuildContext;
 import no.ion.jake.LogSink;
+import no.ion.jake.maven.MavenArtifact;
+import no.ion.jake.maven.MavenCentral;
+import no.ion.jake.maven.MavenDownload;
+import no.ion.jake.maven.MavenRepository;
 import no.ion.jake.module.ModuleContext;
 import no.ion.jake.Project;
 import no.ion.jake.java.Jar;
@@ -113,9 +117,11 @@ public class Main {
         Javac javac = new Javac();
         Jar jar = new Jar();
         Javadoc javadoc = new Javadoc();
+        MavenCentral mavenCentral = new MavenCentral();
+        MavenRepository mavenRepository = new MavenRepository(project, mavenCentral);
 
         ModuleContext testutilContext = new ModuleContext(project, "testutil");
-        TestutilModule testutil = new TestutilModule(testutilContext, javac, javadoc, jar);
+        TestutilModule testutil = new TestutilModule(testutilContext, javac, javadoc, jar, mavenRepository);
         BuildContext testutilBuildContext = new BuildContext(testutilContext, logSink);
         testutil.build(testutilBuildContext);
 
