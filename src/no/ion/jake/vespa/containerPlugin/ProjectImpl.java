@@ -3,35 +3,28 @@ package no.ion.jake.vespa.containerPlugin;
 import com.yahoo.container.plugin.api.Artifact2;
 import com.yahoo.container.plugin.api.Project;
 import com.yahoo.container.plugin.api.Version2;
-import no.ion.jake.module.ModuleContext;
-import no.ion.jake.java.ClassPathBuilder;
-import no.ion.jake.maven.MavenArtifact;
-import no.ion.jake.maven.Scope;
+import no.ion.jake.build.JavaModule;
+import no.ion.jake.build.ModuleContext;
+import no.ion.jake.maven.MavenArtifactId;
 
-import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class ProjectImpl implements Project {
     private final ModuleContext moduleContext;
-    private final ClassPathBuilder classPathBuilder;
-    private final EnumSet<Scope> scopesToInclude;
+    private final JavaModule module;
+    private final List<MavenArtifactId> mavenArtifactIdsForCompile;
 
-    public ProjectImpl(ModuleContext moduleContext, ClassPathBuilder classPathBuilder) {
+    public ProjectImpl(ModuleContext moduleContext, JavaModule module, List<MavenArtifactId> mavenArtifactIdsForCompile) {
         this.moduleContext = moduleContext;
-        this.classPathBuilder = classPathBuilder;
-        this.scopesToInclude = EnumSet.copyOf(ClassPathBuilder.COMPILE_SCOPES);
-    }
-
-    public void setScopesToInclude(EnumSet<Scope> set) {
-        scopesToInclude.clear();
-        scopesToInclude.addAll(set);
+        this.module = module;
+        this.mavenArtifactIdsForCompile = mavenArtifactIdsForCompile;
     }
 
     @Override
     public String getName() {
         // TODO: Not entirely identical (artifactId vs name in Maven)
-        return moduleContext.name();
+        return module.moduleName();
     }
 
     @Override
@@ -42,7 +35,7 @@ public class ProjectImpl implements Project {
     @Override
     public String getBuildFinalName() {
         // TODO: May not be identical for all modules?
-        MavenArtifact artifactId = moduleContext.mavenArtifact();
+        MavenArtifactId artifactId = module.mavenArtifactId();
         return artifactId.groupId() + ":" + artifactId.artifactId();
     }
 
@@ -58,9 +51,9 @@ public class ProjectImpl implements Project {
 
     @Override
     public List<Artifact2> getArtifacts() {
-        return classPathBuilder.getMavenDependencies(scopesToInclude)
+        return mavenArtifactIdsForCompile
                 .stream()
-                .map(mavenArtifact -> new Artifact2Impl(mavenArtifact, moduleContext.project().pathToMavenRepository()))
+                .map(mavenArtifact -> new Artifact2Impl(mavenArtifact, moduleContext.getProject().pathToMavenRepository()))
                 .collect(Collectors.toList());
     }
 
@@ -68,4 +61,5 @@ public class ProjectImpl implements Project {
     public Version2 parseVersion(String s) {
         throw new UnsupportedOperationException("Fix parsing of: " + s);
     }
+
 }

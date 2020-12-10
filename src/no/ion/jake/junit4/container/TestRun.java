@@ -1,7 +1,7 @@
 package no.ion.jake.junit4.container;
 
-import no.ion.jake.BuildContext;
 import no.ion.jake.JakeException;
+import no.ion.jake.build.BuildContext;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
@@ -26,12 +26,12 @@ public class TestRun extends RunListener {
 
     @Override
     public void testRunStarted(Description description) {
-        context.logDebug("Starting test run");
+        context.log().debug("Starting test run");
     }
 
     @Override
     public void testRunFinished(Result result) {
-        context.logDebug("Test run finished");
+        context.log().debug("Test run finished");
 
         if (done) {
             throw new JakeException("Test run finished invoked after run was finished");
@@ -56,7 +56,7 @@ public class TestRun extends RunListener {
             throw new JakeException("There are two JUnit 4 tests with the same ID: " + id);
         }
 
-        context.logDebug("Running test " + test.toString());
+        context.log().debug("Running test " + test.toString());
     }
 
     /**
@@ -88,7 +88,7 @@ public class TestRun extends RunListener {
 
         test.failTest(failure);
 
-        context.logError("test failure: " + test.getSimpleClassMethod() + ": " + failure.getException().toString());
+        context.log().error("test failure: " + test.getSimpleClassMethod() + ": " + failure.getException().toString());
     }
 
     /** Test assumptions are used to skip tests. Invoked between testStarted() and testFinished(). */
@@ -103,7 +103,7 @@ public class TestRun extends RunListener {
 
         test.testAssumptionFailure(failure);
 
-        context.logDebug("Test assumption failure: " + failure.toString());
+        context.log().debug("Test assumption failure: " + failure.toString());
     }
 
     @Override

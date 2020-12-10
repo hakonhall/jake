@@ -3,15 +3,18 @@ package no.ion.jake.vespa;
 import no.ion.jake.LogSink;
 
 import java.io.PrintStream;
+import java.time.Instant;
 import java.util.logging.Level;
 
 class PrintStreamLogSink implements LogSink {
     private final PrintStream out;
     private final Level minLevel;
+    private final boolean includeTime;
 
-    PrintStreamLogSink(PrintStream out, Level minLevel) {
+    PrintStreamLogSink(PrintStream out, Level minLevel, boolean includeTime) {
         this.out = out;
         this.minLevel = minLevel;
+        this.includeTime = includeTime;
     }
 
     @Override
@@ -28,6 +31,11 @@ class PrintStreamLogSink implements LogSink {
             line = null;
         } else {
             StringBuilder lineBuilder = new StringBuilder(2 + message.length());
+
+            if (includeTime) {
+                lineBuilder.append(Instant.now())
+                        .append(' ');
+            }
 
             if (level.intValue() >= Level.SEVERE.intValue()) {
                 lineBuilder.append("E "); // error

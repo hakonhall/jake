@@ -2,7 +2,6 @@ package no.ion.jake.maven;
 
 import no.ion.jake.JakeException;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -26,8 +25,8 @@ public class MavenCentral {
     }
 
     /** Downloads Maven artifact to destinationPath.  Parent directories are created if necessary. */
-    public void downloadTo(MavenArtifact mavenArtifact, Path destinationPath) {
-        String subpath = mavenArtifact.getUriSubpath();
+    public void downloadTo(MavenArtifactId mavenArtifactId, Path destinationPath) {
+        String subpath = mavenArtifactId.getUriSubpath();
         URI url = URI.create("https://repo1.maven.org/maven2/" + subpath);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(url)
@@ -57,11 +56,11 @@ public class MavenCentral {
 
             switch (response.statusCode()) {
                 case 404:
-                    throw new JakeException("failed to download " + mavenArtifact.toCoordinate() + " from maven central: " +
+                    throw new JakeException("failed to download " + mavenArtifactId.toCoordinate() + " from maven central: " +
                             "Not Found: " + response.uri());
             }
 
-            throw new JakeException("failed to download " + mavenArtifact + " from maven central: " + response.toString());
+            throw new JakeException("failed to download " + mavenArtifactId + " from maven central: " + response.toString());
         }
 
         uncheckIO(() -> Files.createDirectories(destinationPath.getParent()));

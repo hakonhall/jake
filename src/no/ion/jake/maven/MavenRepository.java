@@ -1,26 +1,41 @@
 package no.ion.jake.maven;
 
-import no.ion.jake.Project;
+import no.ion.jake.build.Artifact;
+import no.ion.jake.build.Declarator;
 
+import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.Map;
 
 public class MavenRepository {
-    private final Project project;
+    private final Object monitor = new Object();
+    private final Map<MavenArtifactId, MavenDownload> downloads = new HashMap<>();
+
+    private final Path localRepo;
     private final MavenCentral mavenCentral;
 
-    private final Object monitor = new Object();
-    private final HashMap<MavenArtifact, ArtifactHandle> artifacts = new HashMap<>();
-
-    public MavenRepository(Project project, MavenCentral mavenCentral) {
-        this.project = project;
+    public MavenRepository(Path localRepo, MavenCentral mavenCentral) {
+        this.localRepo = localRepo;
         this.mavenCentral = mavenCentral;
     }
 
-    public MavenDownload scheduleDownloadOf(MavenArtifact artifact) {
-        return new MavenDownload(project, mavenCentral, artifact);
-    }
+    public Path localRepositoryPath() { return localRepo; }
 
-    private ArtifactHandle getArtifactInfoLocked(MavenArtifact artifact) {
-        return artifacts.computeIfAbsent(artifact, __ -> new ArtifactHandle(project, artifact));
+    public MavenArtifact declareDownload(Declarator declarator, MavenArtifactId mavenArtifactId) {
+        synchronized (monitor) {
+            MavenDownload download = downloads.get(mavenArtifactId);
+            if (download != null) {
+                return download.mavenArtifact();
+            }
+
+            try (var declaration = declarator.declareGlobalBuild()) {
+                Artifact<Path> artifact = declaration.producesGlobalArtifact(Path.class, mavenArtifactId.toCoordinate());
+                MavenDownload mavenDownload = new MavenDownload(mavenCentral, localRepo, mavenArtifactId, artifact);
+                declaration.forBuild(mavenDownload);
+                downloads.put(mavenArtifactId, mavenDownload);
+                return mavenDownload.mavenArtifact();
+            }
+        }
+
     }
 }

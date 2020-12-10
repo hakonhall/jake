@@ -1,7 +1,5 @@
 package no.ion.jake.io;
 
-import no.ion.jake.BuildContext;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.DirectoryStream;
@@ -38,29 +36,22 @@ public class Copy {
         this.type = type;
     }
 
-    /**
-     * Copies the file tree {@code from} onto {@code to} if {@code from} exists, and except for files that are more
-     * recent in {@code to}.  Symlinks in {@code from} are followed.
-     */
-    public CopyResult install(BuildContext context) {
-        Path absoluteFrom = fromPath.isAbsolute() ? fromPath : context.moduleContext().path().resolve(fromPath);
-        if (!Files.exists(absoluteFrom)) {
-            return CopyResult.nothingToCopy();
+    public CopyResult install() {
+        if (!Files.exists(fromPath)) {
+            throw new UncheckedIOException(new NoSuchFileException(fromPath.toString()));
         }
 
-        Path absoluteTo = toPath.isAbsolute() ? toPath : context.moduleContext().path().resolve(toPath);
-
         if (type == PathType.FILE) {
-            uncheckIO(() -> Files.createDirectories(absoluteTo.getParent()));
-            uncheckIO(() -> Files.copy(absoluteFrom, absoluteTo, StandardCopyOption.REPLACE_EXISTING));
+            uncheckIO(() -> Files.createDirectories(toPath.getParent()));
+            uncheckIO(() -> Files.copy(fromPath, toPath, StandardCopyOption.REPLACE_EXISTING));
             return CopyResult.copiedFiles(1);
         } else {
-            int numCopied = recursiveInstall(context, absoluteFrom, absoluteTo);
+            int numCopied = recursiveInstall(fromPath, toPath);
             return CopyResult.copiedFiles(numCopied);
         }
     }
 
-    private static int recursiveInstall(BuildContext context, Path from, Path to) {
+    private static int recursiveInstall(Path from, Path to) {
         // This starts by trying to create the directory, and if FileExist is thrown tests to see if the directory
         // exists.  So this is close to optimal already.
         uncheckIO(() -> Files.createDirectories(to));
@@ -74,7 +65,7 @@ public class Copy {
 
                 var attributes = uncheckIO(() -> Files.readAttributes(path, PosixFileAttributes.class));
                 if (attributes.isDirectory()) {
-                    numCopied += recursiveInstall(context, from.resolve(path), toPath);
+                    numCopied += recursiveInstall(from.resolve(path), toPath);
                 } else if (attributes.isRegularFile()) {
                     try {
                         PosixFileAttributes toAttributes = Files.readAttributes(toPath, PosixFileAttributes.class);

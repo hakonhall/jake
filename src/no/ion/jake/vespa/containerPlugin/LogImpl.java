@@ -1,7 +1,7 @@
 package no.ion.jake.vespa.containerPlugin;
 
 import com.yahoo.container.plugin.api.Log;
-import no.ion.jake.BuildContext;
+import no.ion.jake.build.BuildContext;
 
 public class LogImpl implements Log {
     private final BuildContext buildContext;
@@ -12,31 +12,31 @@ public class LogImpl implements Log {
 
     @Override
     public boolean isDebugEnabled() {
-        return buildContext.isDebugEnabled();
+        return buildContext.log().isDebugEnabled();
     }
 
     @Override
     public void debug(CharSequence charSequence) {
-        buildContext.logDebug(charSequence::toString);
+        buildContext.log().debug(charSequence::toString);
     }
 
     @Override
     public void info(CharSequence charSequence) {
-        buildContext.logInfo(charSequence.toString());
+        buildContext.log().info(charSequence.toString());
     }
 
     @Override
     public void warn(CharSequence charSequence) {
-        buildContext.logWarning(charSequence.toString());
+        buildContext.log().warning(charSequence.toString());
     }
 
     @Override
     public void warn(CharSequence charSequence, Throwable cause) {
-        buildContext.logWarning(charSequence.toString(), cause);
+        buildContext.log().warning(charSequence.toString(), cause);
     }
 
     @Override
     public void warn(Throwable throwable) {
-        buildContext.logWarning("", throwable);
+        buildContext.log().warning("", throwable);
     }
 }

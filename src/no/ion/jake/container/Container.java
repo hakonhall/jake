@@ -87,6 +87,8 @@ public class Container {
             throw new IllegalAccessError("The class " + className + " is not public");
         }
 
+        var foo = bootstrapClass.getDeclaredMethods();
+
         Method method;
         try {
             method = bootstrapClass.getDeclaredMethod(staticMethod, parameterTypes);

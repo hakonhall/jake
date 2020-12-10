@@ -1,4 +1,4 @@
-package no.ion.jake.module;
+package no.ion.jake.build;
 
 /**
  * The specification of the goal targets of the current build execution, e.g. "build everything",
