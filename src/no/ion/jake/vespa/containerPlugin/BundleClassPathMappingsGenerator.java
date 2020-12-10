@@ -1,35 +1,38 @@
 package no.ion.jake.vespa.containerPlugin;
 
-import com.yahoo.container.plugin.bundle.GenerateBundleClassPathMappings;
-import no.ion.jake.BuildContext;
-import no.ion.jake.build.Build;
-import no.ion.jake.build.BuildResult;
-import no.ion.jake.module.ModuleContext;
-import no.ion.jake.java.ClassPathBuilder;
+import no.ion.jake.build.Artifact;
+import no.ion.jake.build.Declarator;
+import no.ion.jake.build.JavaModule;
+import no.ion.jake.build.ModuleContext;
+import no.ion.jake.maven.MavenArtifact;
 
 import java.nio.file.Path;
+import java.util.List;
 
-public class BundleClassPathMappingsGenerator implements Build {
-    private final GenerateBundleClassPathMappings.Params params;
+public class BundleClassPathMappingsGenerator {
     private final ModuleContext moduleContext;
+    private final JavaModule module;
+    private final List<MavenArtifact> mavenArtifactsForCompile;
 
-    public BundleClassPathMappingsGenerator(ModuleContext moduleContext, ClassPathBuilder classPathBuilder) {
+    public BundleClassPathMappingsGenerator(ModuleContext moduleContext, JavaModule module, List<MavenArtifact> mavenArtifactsForCompile) {
         this.moduleContext = moduleContext;
-        ProjectImpl project = new ProjectImpl(moduleContext, classPathBuilder);
-        params = new GenerateBundleClassPathMappings.Params(project)
-                // TODO: jdisc_core_test/test_bundles/cert-ml-dup jdisc_core_test/test_bundles/cert-ml-dup
-                // jdisc_core_test/test_bundles/cert-b jdisc_core_test/test_bundles/cert-l1-dup messagebus-disc
-                // metrics-proxy container-core container-search-and-docproc hosted-tenant-base provided-dependencies
-                // jdisc_core config-model-fat container-messagebus
-                .setBundleSymbolicName(moduleContext.name());
+        this.module = module;
+        this.mavenArtifactsForCompile = mavenArtifactsForCompile;
     }
 
-    @Override
-    public BuildResult build(BuildContext buildContext) {
-        GenerateBundleClassPathMappings.execute(params);
+    public Artifact<Path> declareGenerate(Declarator declarator) {
+        try (var declaration = declarator.declareNewBuild()) {
+            // Although the mappings file includes a path to the destination directory of the source compilation
+            // (target/classes), we don't actually depend on compilation having completed or even started yet.
 
-        Path outputPath = moduleContext.project().fileSystem()
-                .getPath("target/test-classes/bundle-plugin.bundle-classpath-mappings.json");
-        return BuildResult.of("wrote " + outputPath);
+            mavenArtifactsForCompile.stream().map(MavenArtifact::pathArtifact).forEach(declaration::dependsOn);
+
+            Artifact<Path> mappingsFileArtifact = declaration.producesArtifact(Path.class, "bundle classpath mappings");
+
+            declaration.forBuild(new BundleClassPathMappingsGeneratorBuild("generate bundle classpath mappings file",
+                    moduleContext, module, mavenArtifactsForCompile, mappingsFileArtifact));
+
+            return mappingsFileArtifact;
+        }
     }
 }

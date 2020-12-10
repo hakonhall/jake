@@ -63,6 +63,7 @@ public class UriPathBuilder {
         return this;
     }
 
+    /** Percent encodes string, and appends it to the current segment. */
     public UriPathBuilder appendPercentEncodedToSegment(String string) {
         byte[] bytes = string.getBytes(StandardCharsets.UTF_8);
         for (byte b : bytes) {
@@ -79,10 +80,10 @@ public class UriPathBuilder {
 
     /**
      * @return true if the code point of a path segment must be percent encoded.
-     * @apiNote for all chars c of a code point cp, mustBePercentEncoded(c) == mustBePercentEncoded(cp), which means
-     *          you can invoke this method with the chars of a segment too and get the right return value.
+     * @apiNote for all chars C of a code point CP, mustBePercentEncoded(C) == mustBePercentEncoded(CP), which makes
+     *          it easy to loop over chars.
      */
-    private static boolean mustBePercentEncoded(int codePointOrChar) {
+    public static boolean mustBePercentEncoded(int codePointOrChar) {
         // unreserved, part 1
         if (('a' <= codePointOrChar && codePointOrChar <= 'z') ||
                 ('A' <= codePointOrChar && codePointOrChar <= 'Z') ||

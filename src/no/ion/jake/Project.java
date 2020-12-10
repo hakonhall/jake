@@ -1,6 +1,6 @@
 package no.ion.jake;
 
-import no.ion.jake.maven.MavenArtifact;
+import no.ion.jake.maven.MavenArtifactId;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -9,12 +9,14 @@ import java.util.Objects;
 public class Project {
     private final FileSystem fileSystem;
     private final Path path;
+    private final Path jakeJarPath;
     private final Path home;
     private final Path localRepo;
 
-    public Project(Path path) {
+    public Project(Path path, Path jakeJarPath) {
         this.fileSystem = path.getFileSystem();
         this.path = path;
+        this.jakeJarPath = jakeJarPath;
 
         String home = System.getProperty("user.home");
         if (home == null) {
@@ -32,7 +34,7 @@ public class Project {
         return path;
     }
 
-    public Path pathToMavenArtifactInLocalRepo(MavenArtifact artifactId) {
+    public Path pathToMavenArtifactInLocalRepo(MavenArtifactId artifactId) {
         String relativePath = artifactId.toRepoPath();
         return localRepo.resolve(relativePath);
     }
@@ -80,6 +82,8 @@ public class Project {
             default: throw new UserError("bad maven coordinate: " + mavenCoordinate);
         }
     }
+
+    public Path jakeJarPath() { return jakeJarPath; }
 
     private static void validatePathComponent(String component, String name) {
         if (component.indexOf('/') != -1 || component.isEmpty() || component.equals(".") || component.equals("..")) {

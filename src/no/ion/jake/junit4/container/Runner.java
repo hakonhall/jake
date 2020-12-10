@@ -1,6 +1,6 @@
 package no.ion.jake.junit4.container;
 
-import no.ion.jake.BuildContext;
+import no.ion.jake.build.BuildContext;
 import no.ion.jake.junit4.JUnit4TestResults;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;

@@ -1,11 +1,12 @@
 package no.ion.jake.junit4;
 
 import no.ion.jake.AbortException;
-import no.ion.jake.BuildContext;
+import no.ion.jake.build.Artifact;
 import no.ion.jake.build.Build;
-import no.ion.jake.build.BuildResult;
+import no.ion.jake.build.BuildContext;
 import no.ion.jake.container.Container;
 import no.ion.jake.java.ClassPath;
+import no.ion.jake.java.ClassPathEntry;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -20,37 +21,38 @@ import java.util.function.Predicate;
 
 import static no.ion.jake.util.Exceptions.uncheckIO;
 
-public class JUnit4TestRunner implements Build {
+public class JUnit4TestRun implements Build {
     private static final Set<String> PACKAGES_ACCESSIBLE_TO_UNIT_TESTS = Set.of(
-            "no.ion.jake", "no.ion.jake.junit4", "no.ion.jake.util");
+            "no.ion.jake", "no.ion.jake.junit4", "no.ion.jake.util",
+            // TODO: Remove this once BuildContext has been moved to one of the above
+            "no.ion.jake.build");
 
-    private final ClassPath classPath = new ClassPath();
-    private Path testCompilationDestinationDirectory = null;
+    private final String name;
+    private final Artifact<Path> testClassesArtifact;
+    private final List<ClassPathEntry> classPathEntries;
+    private final Artifact<Void> testArtifact;
 
-    public JUnit4TestRunner() {}
-
-    public JUnit4TestRunner addClassPath(ClassPath classPath) {
-        this.classPath.addFrom(classPath);
-        return this;
-    }
-
-    public JUnit4TestRunner setTestCompileDestinationDirectory(Path testCompilationDestinationDirectory) {
-        this.testCompilationDestinationDirectory = testCompilationDestinationDirectory;
-        return this;
+    public JUnit4TestRun(String name, Artifact<Path> testClassesArtifact, List<ClassPathEntry> classPathEntries, Artifact<Void> testArtifact) {
+        this.name = name;
+        this.testClassesArtifact = testClassesArtifact;
+        this.classPathEntries = classPathEntries;
+        this.testArtifact = testArtifact;
     }
 
     @Override
-    public BuildResult build(BuildContext buildContext) {
-        if (testCompilationDestinationDirectory == null) {
-            throw new IllegalStateException("testCompilationDestinationDirectory has not been set");
-        }
-        Path testCompilationDestinationPath = buildContext.moduleContext().path().resolve(testCompilationDestinationDirectory);
+    public String name() {
+        return name;
+    }
+
+    @Override
+    public void build(BuildContext buildContext) {
+        Path testClassesPath = testClassesArtifact.detail();
 
         List<String> testClassNames = new ArrayList<>();
-        uncheckIO(() -> Files.walkFileTree(testCompilationDestinationPath, new SimpleFileVisitor<Path>() {
+        uncheckIO(() -> Files.walkFileTree(testClassesPath, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                String relativePath = testCompilationDestinationPath.relativize(file).normalize().toString();
+                String relativePath = testClassesPath.relativize(file).normalize().toString();
                 if (!relativePath.endsWith(".class")) {
                     return FileVisitResult.CONTINUE;
                 }
@@ -80,6 +82,19 @@ public class JUnit4TestRunner implements Build {
             return false;
         };
 
+        ClassPath classPath = new ClassPath();
+        classPathEntries.forEach(entry -> {
+            switch (entry.getType()) {
+                case EXPLODED_JAR:
+                    classPath.addExplodedJar(entry.getValidatedPath().toAbsolutePath());
+                    return;
+                case JAR:
+                    classPath.addJar(entry.getValidatedPath().toAbsolutePath());
+                    return;
+            }
+            throw new IllegalArgumentException("unknown class path entry type: " + entry.getType());
+        });
+
         Container junit4Container = Container.create("junit4", classPath, useOurClassLoader);
         JUnit4TestResults results = junit4Container.invoke(
                 JUnit4TestResults.class,
@@ -90,9 +105,12 @@ public class JUnit4TestRunner implements Build {
                 testClassNames);
 
         if (!results.success()) {
+            // TODO: Handle this correctly with concurrent execution
             throw new AbortException(results.message());
         }
 
-        return BuildResult.of(false, results.message(), false);
+        buildContext.newPublicationOf(testArtifact)
+                .log(results.message())
+                .publish(null);
     }
 }

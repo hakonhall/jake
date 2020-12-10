@@ -4,8 +4,8 @@ import no.ion.jake.JakeException;
 
 import static java.util.Objects.requireNonNull;
 
-public class JavaCompilationException extends JakeException {
-    public JavaCompilationException(String message) {
+public class JavaCompilerException extends JakeException {
+    public JavaCompilerException(String message) {
         super(requireNonNull(message));
     }
 }

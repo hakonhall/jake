@@ -1,14 +1,18 @@
 package no.ion.jake.vespa.containerPlugin;
 
-import com.yahoo.container.plugin.osgi.GenerateOsgiManifest;
-import no.ion.jake.BuildContext;
-import no.ion.jake.build.Build;
-import no.ion.jake.build.BuildResult;
-import no.ion.jake.module.ModuleContext;
-import no.ion.jake.java.ClassPathBuilder;
+import no.ion.jake.build.Artifact;
+import no.ion.jake.build.Declarator;
+import no.ion.jake.build.JavaModule;
+import no.ion.jake.build.ModuleContext;
+import no.ion.jake.maven.MavenArtifact;
 
-public class OsgiManifestGenerator implements Build {
+import java.nio.file.Path;
+import java.util.List;
+
+public class OsgiManifestGenerator {
+    private final String name;
     private final ModuleContext moduleContext;
+    private final JavaModule module;
 
     // TODO: Original has lots of sanity-checking that produces warnings
     private String discApplicationClass = null;
@@ -22,12 +26,15 @@ public class OsgiManifestGenerator implements Build {
     private String bundleVersion;
     private String bundleSymbolicName;
     private String importPackage = null;
-    private ClassPathBuilder classPathBuilder = null;
+    private List<MavenArtifact> mavenArtifactsForCompile;
+    private Artifact<Path> classesArtifact;
 
-    public OsgiManifestGenerator(ModuleContext moduleContext) {
+    public OsgiManifestGenerator(String name, ModuleContext moduleContext, JavaModule module) {
+        this.name = name;
         this.moduleContext = moduleContext;
-        this.bundleVersion = moduleContext.version().version();
-        this.bundleSymbolicName = moduleContext.mavenArtifact().artifactId();
+        this.module = module;
+        this.bundleVersion = module.mavenArtifactId().version();
+        this.bundleSymbolicName = module.mavenArtifactId().artifactId();
     }
 
     // TODO: container-disc and standalone-container
@@ -103,31 +110,44 @@ public class OsgiManifestGenerator implements Build {
         return this;
     }
 
-    public OsgiManifestGenerator setClassPathBuilder(ClassPathBuilder classPathBuilder) {
-        this.classPathBuilder = classPathBuilder;
+    public OsgiManifestGenerator addClassPathEntryArtifacts(List<MavenArtifact> mavenArtifactsForCompile) {
+        this.mavenArtifactsForCompile = mavenArtifactsForCompile;
         return this;
     }
 
-    @Override
-    public BuildResult build(BuildContext buildContext) {
-        ProjectImpl projectImpl = new ProjectImpl(moduleContext, classPathBuilder);
-        LogImpl logImpl = new LogImpl(buildContext);
+    public OsgiManifestGenerator addClassesArtifact(Artifact<Path> classesArtifact) {
+        this.classesArtifact = classesArtifact;
+        return this;
+    }
 
-        GenerateOsgiManifest.Params params = new GenerateOsgiManifest.Params(projectImpl, logImpl)
-                .setDiscApplicationClass(discApplicationClass)
-                .setDiscPreInstallBundle(discPreInstallBundle)
-                .setBundleActivator(bundleActivator)
-                .setJdiscPrivilegedActivator(jdiscPrivilegedActivator)
-                .setWebInfUrl(webInfUrl)
-                .setMainClass(mainClass)
-                .setBuildLegacyVespaPlatformBundle(buildLegacyVespaPlatformBundle)
-                .setUseArtifactVersionForExportPackages(useArtifactVersionForExportPackages)
-                .setBundleVersion(bundleVersion)
-                .setBundleSymbolicName(bundleSymbolicName)
-                .setImportPackage(importPackage);
+    public Artifact<Path> declareGenerate(Declarator declarator) {
+        try (var declaration = declarator.declareNewBuild()) {
+            declaration.dependsOn(classesArtifact);
+            // Skip the following, because of the above.
+            // mavenArtifactsForCompile.stream().map(MavenArtifact::pathArtifact).forEach(declaration::dependsOn);
+            // TODO: depend on resources being copied to classes
 
-        GenerateOsgiManifest.execute(params);
+            Artifact<Path> manifestArtifact = declaration.producesArtifact(Path.class, "manifest");
 
-        return BuildResult.of("wrote target/classes/META-INF/MANIFEST.MF");
+            declaration.forBuild(new OsgiManifestGeneratorBuild(
+                    name,
+                    moduleContext,
+                    module,
+                    discApplicationClass,
+                    discPreInstallBundle,
+                    bundleActivator,
+                    jdiscPrivilegedActivator,
+                    webInfUrl,
+                    mainClass,
+                    buildLegacyVespaPlatformBundle,
+                    useArtifactVersionForExportPackages,
+                    bundleVersion,
+                    bundleSymbolicName,
+                    importPackage,
+                    mavenArtifactsForCompile,
+                    manifestArtifact));
+
+            return manifestArtifact;
+        }
     }
 }

@@ -74,4 +74,4 @@ exec java \
 "$dir"/lib/jackson-databind-2.8.11.6.jar:\
 "$dir"/lib/jackson-core-2.8.11.jar:\
 "$dir"/lib/jackson-annotations-2.8.11.jar \
-     no.ion.jake.vespa.Main "$@"
+     no.ion.jake.vespa.Main --jar "$jar"  "$@"

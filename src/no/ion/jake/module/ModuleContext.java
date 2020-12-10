@@ -3,7 +3,7 @@ package no.ion.jake.module;
 import no.ion.jake.Project;
 import no.ion.jake.Version;
 import no.ion.jake.io.FileSet;
-import no.ion.jake.maven.MavenArtifact;
+import no.ion.jake.maven.MavenArtifactId;
 
 import java.nio.file.Path;
 import java.util.Objects;
@@ -15,7 +15,7 @@ public class ModuleContext {
     private final String name;
     private final Version version;
 
-    private MavenArtifact artifactId;
+    private MavenArtifactId artifactId;
 
     public ModuleContext(Project project, String relativePath) {
         this(project, relativePath, Path.of(relativePath).getFileName().toString(), Version.getDefault());
@@ -45,18 +45,16 @@ public class ModuleContext {
             this.relativePath = recalculatedRelativePath;
         }
 
-        setArtifactId(MavenArtifact.from("com.yahoo.vespa", name));
+        setArtifactId(MavenArtifactId.from("com.yahoo.vespa", name));
     }
 
     public String name() { return name; }
     public Version version() { return version; }
     public Path path() { return path; }
-    public Path relativePath() { return relativePath; }
-    public FileSet newFileSet() { return new FileSet(path); }
     public Project project() { return project; }
-    public MavenArtifact mavenArtifact() { return Objects.requireNonNull(artifactId, "artifactId of module not set"); }
+    public MavenArtifactId mavenArtifact() { return Objects.requireNonNull(artifactId, "artifactId of module not set"); }
 
-    private ModuleContext setArtifactId(MavenArtifact artifactId) {
+    private ModuleContext setArtifactId(MavenArtifactId artifactId) {
         this.artifactId = artifactId.optionalVersion()
                 .map(version -> artifactId)
                 .orElseGet(() -> artifactId.withVersion("7-SNAPSHOT"));
