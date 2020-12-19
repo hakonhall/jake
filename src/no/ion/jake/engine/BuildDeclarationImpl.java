@@ -14,15 +14,15 @@ import java.util.Set;
 public class BuildDeclarationImpl implements Declarator.BuildDeclaration {
     private final List<Artifact<?>> dependencies = new ArrayList<>();
     private final Set<ArtifactImpl<?>> production = new HashSet<>();
-    private final BuildGraph buildGraph;
+    private final BuildSet buildSet;
     private final ModuleContext moduleContext;
     private final Module module;
 
     private Build build = null;
     private boolean closed = false;
 
-    public BuildDeclarationImpl(BuildGraph buildGraph, ModuleContext moduleContext, Module module) {
-        this.buildGraph = buildGraph;
+    public BuildDeclarationImpl(BuildSet buildSet, ModuleContext moduleContext, Module module) {
+        this.buildSet = buildSet;
         this.moduleContext = moduleContext;
         this.module = module;
     }
@@ -52,7 +52,7 @@ public class BuildDeclarationImpl implements Declarator.BuildDeclaration {
             throw new IllegalStateException("it's illegal to invoke producesArtifact() after close()");
         }
 
-        ArtifactImpl<T> artifactImpl = buildGraph.newArtifact(type, moduleNameOrNull, name);
+        ArtifactImpl<T> artifactImpl = buildSet.newArtifact(type, moduleNameOrNull, name);
 
         if (production.contains(artifactImpl)) {
             throw new IllegalArgumentException("duplicate production of artifact '" + name + "'");
@@ -83,6 +83,6 @@ public class BuildDeclarationImpl implements Declarator.BuildDeclaration {
             throw new IllegalStateException("bindTo() has not been invoked");
         }
 
-        buildGraph.addBuild(moduleContext, module, build, dependencies, production);
+        buildSet.addBuild(moduleContext, module, build, dependencies, production);
     }
 }

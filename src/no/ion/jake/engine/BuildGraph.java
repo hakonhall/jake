@@ -1,76 +1,96 @@
 package no.ion.jake.engine;
 
+import com.sun.management.ThreadMXBean;
 import no.ion.jake.LogSink;
-import no.ion.jake.build.Artifact;
-import no.ion.jake.build.Build;
-import no.ion.jake.build.Module;
-import no.ion.jake.build.ModuleContext;
+import no.ion.jake.graph.BuildOrder;
 import no.ion.jake.util.SetUtil;
 
+import java.lang.management.ManagementFactory;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
-public class BuildGraph {
-    private final Object monitor = new Object();
-    private final HashMap<ArtifactId, ArtifactImpl<?>> artifacts = new HashMap<>();
-    private final HashMap<BuildId, BuildInfo> builds = new HashMap<>();
-    private final List<BuildInfo> buildInfoList = new ArrayList<>();
-    private final Deque<ResultInfo> results = new ArrayDeque<>();
+import static java.util.function.Function.identity;
+
+public class BuildGraph implements AutoCloseable {
     private final JakeExecutor jakeExecutor;
+    private final ScheduledExecutorService loadUpdaterService;
+    private final ThreadMXBean threadMXBean;
+    private final BuildOrder<BuildId> buildOrder;
+    private final ArtifactRegistry artifactRegistry;
     private final LogSink logSink;
-    private final SingleBuildDriver singleBuildDriver;
+    private final Map<BuildId, BuildInfo> builds;
 
-    public BuildGraph(JakeExecutor jakeExecutor, LogSink logSink, SingleBuildDriver singleBuildDriver) {
+    private final float targetLoad;
+    private final AtomicLong loadx1000 = new AtomicLong(0L);
+    private final AtomicLong artificialLoadx1000 = new AtomicLong(0L);
+
+    private final Object monitor = new Object();
+
+    private static final int loadUpdateIntervalInMillis = 100;
+    private volatile long lastSumCpuTimeNanos = 0;
+
+    public BuildGraph(JakeExecutor jakeExecutor, float targetLoad, BuildOrder<BuildId> buildOrder,
+                      Collection<BuildInfo> builds, ArtifactRegistry artifactRegistry, LogSink logSink) {
         this.jakeExecutor = jakeExecutor;
+        this.targetLoad = targetLoad;
+        this.buildOrder = buildOrder;
+        this.artifactRegistry = artifactRegistry;
         this.logSink = logSink;
-        this.singleBuildDriver = singleBuildDriver;
-    }
+        this.builds = builds.stream().collect(Collectors.toMap(BuildInfo::id, identity()));
 
-    public <T> ArtifactImpl<T> newArtifact(Class<T> artifactClass, String moduleNameOrNull, String name) {
-        var artifactId = new ArtifactId(moduleNameOrNull, name);
-        var artifact = new ArtifactImpl<>(artifactId, artifactClass);
-
-        synchronized (monitor) {
-            if (artifacts.put(artifactId, artifact) != null) {
-                throw new IllegalArgumentException("duplicate artifact: " + artifactId.toString());
-            }
+        java.lang.management.ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+        if (!(threadMXBean instanceof ThreadMXBean)) {
+            // add other JVMs when needed...
+            throw new IllegalStateException("implementation requires Sun/Oracle based JVM");
+        }
+        this.threadMXBean = (ThreadMXBean) threadMXBean;
+        if (!threadMXBean.isThreadCpuTimeSupported()) {
+            throw new IllegalStateException("implementation requires JVM supports thread CPU time");
+        }
+        if (!threadMXBean.isThreadCpuTimeEnabled()) {
+            threadMXBean.setThreadCpuTimeEnabled(true);
         }
 
-        return artifact;
+        this.loadUpdaterService = Executors.newScheduledThreadPool(1);
+        loadUpdaterService.scheduleAtFixedRate(this::updateLoad, 0, loadUpdateIntervalInMillis, TimeUnit.MILLISECONDS);
     }
 
-    public void addBuild(ModuleContext moduleContext, Module module, Build build, List<Artifact<?>> dependencies,
-                         Set<ArtifactImpl<?>> production) {
-        Set<ArtifactId> dependencySet = dependencies.stream()
-                .map(this::verifyArtifact)
-                .map(ArtifactImpl::artifactId)
-                .collect(Collectors.toSet());
+    public void runSync() {
+        Deque<ResultInfo> results = new ArrayDeque<>();
 
-        Set<ArtifactId> productionSet = production.stream()
-                .map(ArtifactImpl::artifactId)
-                .collect(Collectors.toSet());
-
-        BuildId buildId = new BuildId(module.moduleName(), build.name());
-        var info = new BuildInfo(buildId, moduleContext, module, build, dependencySet, productionSet);
         synchronized (monitor) {
-            if (!artifacts.keySet().containsAll(dependencySet)) {
-                throw new IllegalArgumentException(buildId.toString() + " depends on artifacts that no-one are producing");
-            }
+            while (true) {
+                BuildOrder.NextBuild<BuildId> nextBuild = buildOrder.calculateNextBuild();
+                if (nextBuild.isDone()) {
+                    return;
+                }
 
-            if (builds.putIfAbsent(buildId, info) != null) {
-                throw new IllegalArgumentException("duplicate build: " + buildId.toString());
-            }
+                if (nextBuild.isReady()) {
+                    if (spawnBuild(nextBuild.getReadyBuild(), results)) {
+                        continue;
+                    }
+                }
 
-            buildInfoList.add(info);
+                if (!results.isEmpty()) {
+                    handleResultInfo(results.pollFirst());
+                    continue;
+                }
+
+                // getting here also if load is too high.  Should sleep until the load have had a chance to lower.
+                try { monitor.wait(10); } catch (InterruptedException ignore) { }
+            }
         }
     }
 
@@ -84,150 +104,104 @@ public class BuildGraph {
         }
     }
 
-    public void buildEverything() {
-        Set<BuildId> pendingBuilds = new HashSet<>(builds.keySet());
-        Set<BuildId> activeBuilds = new HashSet<>();
-        Set<ArtifactId> completedArtifacts = new HashSet<>();
+    private boolean spawnBuild(BuildId buildId, Deque<ResultInfo> results) {
+        final BuildInfo buildInfo = builds.get(buildId);
+        if (buildInfo == null) {
+            throw new IllegalStateException("build ID does not exist: " + buildId.toString());
+        }
 
-        synchronized (monitor) {
-            do {
-                do {
-                    Optional<BuildInfo> buildReadyToRun = pendingBuilds.stream()
-                            .map(buildId -> {
-                                BuildInfo info = getBuildInfo(buildId);
-                                for (var dependency : info.dependencies()) {
-                                    if (!completedArtifacts.contains(dependency)) {
-                                        return null;
-                                    }
-                                }
+        if (!loadAllowsAnotherBuild(buildInfo)) {
+            return false;
+        }
 
-                                return info;
-                            })
-                            .filter(Objects::nonNull)
-                            .findAny();
-                    if (buildReadyToRun.isEmpty()) {
-                        break;
-                    }
+        buildOrder.reportActiveBuild(buildId);
 
-                    logSink.log(Level.FINE, "Scheduling build of '" + buildReadyToRun.get().id() + "'", null);
+        // preempt updateLoad: add 1 to avoid multiple runMoreBuilds to schedule many builds before the load
+        // is updated to reflect the newly added builds.  This must be decremented once the build starts.
+        // TODO: Add decrement elsewhere.
+        // TODO: Add something other than 1, e.g. expectedLoad + delta.
+        final long loadx1000 = 1000L;
+        artificialLoadx1000.addAndGet(loadx1000);
 
-                    pendingBuilds.remove(buildReadyToRun.get().id());
-                    activeBuilds.add(buildReadyToRun.get().id());
+        jakeExecutor.runAsync(() -> {
+            artificialLoadx1000.addAndGet(-loadx1000);
 
-                    jakeExecutor.runAsync(() -> {
-                        BuildResult result = singleBuildDriver.runSync(this::verifyArtifact, buildReadyToRun.get());
+            SingleBuildDriver driver = new SingleBuildDriver(logSink);
+            BuildResult result = driver.runSync(artifactRegistry, buildInfo);
 
-                        synchronized (monitor) {
-                            results.addLast(new ResultInfo(buildReadyToRun.get(), result));
-                            monitor.notifyAll();
-                        }
-                    });
-                } while (true);
+            synchronized (monitor) {
+                buildOrder.reportCompletedBuild(buildId);
+                results.addLast(new ResultInfo(buildInfo, result));
+                monitor.notify();
+            }
+        });
 
-                while (!results.isEmpty()) {
-                    ResultInfo resultInfo = results.pollFirst();
-                    BuildResult result = resultInfo.result;
-                    BuildInfo completedBuild = resultInfo.buildInfo;
+        return true;
+    }
 
-                    activeBuilds.remove(completedBuild.id());
+    private void handleResultInfo(ResultInfo resultInfo) {
+        BuildResult result = resultInfo.result;
+        BuildInfo completedBuild = resultInfo.buildInfo;
 
-                    result.getRuntimeException().ifPresent(e -> {
-                        throw e;
-                    });
-                    result.getError().ifPresent(e -> {
-                        throw e;
-                    });
+        result.getRuntimeException().ifPresent(e -> {
+            throw e;
+        });
+        result.getError().ifPresent(e -> {
+            throw e;
+        });
 
-                    Set<ArtifactId> declaredArtifacts = completedBuild.production();
-                    Set<ArtifactId> publishedArtifacts = result.publishedArtifacts();
+        Set<ArtifactId> declaredArtifacts = completedBuild.production();
+        Set<ArtifactId> publishedArtifacts = result.publishedArtifacts();
 
-                    Set<ArtifactId> unpublishedArtifacts = SetUtil.difference(declaredArtifacts, publishedArtifacts);
-                    if (!unpublishedArtifacts.isEmpty()) {
-                        throw new BadBuildException(completedBuild.build(), "failed to publish: " +
-                                unpublishedArtifacts.stream().map(ArtifactId::artifactName).collect(Collectors.joining(", ")));
-                    }
+        Set<ArtifactId> unpublishedArtifacts = SetUtil.difference(declaredArtifacts, publishedArtifacts);
+        if (!unpublishedArtifacts.isEmpty()) {
+            throw new BadBuildException(completedBuild.build(), "failed to publish: " +
+                    unpublishedArtifacts.stream().map(ArtifactId::artifactName).collect(Collectors.joining(", ")));
+        }
 
-                    Set<ArtifactId> unknownArtifacts = SetUtil.difference(publishedArtifacts, declaredArtifacts);
-                    if (!unknownArtifacts.isEmpty()) {
-                        // this is impossible at the time this comment was made
-                        throw new BadBuildException(completedBuild.build(), "published extraneous artifacts: " +
-                                unknownArtifacts.stream().map(ArtifactId::artifactName).collect(Collectors.joining(", ")));
-                    }
+        Set<ArtifactId> unknownArtifacts = SetUtil.difference(publishedArtifacts, declaredArtifacts);
+        if (!unknownArtifacts.isEmpty()) {
+            // this is impossible at the time this comment was made
+            throw new BadBuildException(completedBuild.build(), "published extraneous artifacts: " +
+                    unknownArtifacts.stream().map(ArtifactId::artifactName).collect(Collectors.joining(", ")));
+        }
+    }
 
-                    completedArtifacts.addAll(publishedArtifacts);
-                }
-
-                if (pendingBuilds.isEmpty() && activeBuilds.isEmpty()) {
+    @Override
+    public void close() {
+        loadUpdaterService.shutdown();
+        for (;;) {
+            try {
+                if (loadUpdaterService.awaitTermination(1, TimeUnit.SECONDS)) {
                     break;
                 }
+            } catch (InterruptedException ignored) {
+                logSink.log(Level.WARNING, "was interrupted during shutdown, ignoring", null);
+            }
 
-                try {
-                    monitor.wait(100);
-                } catch (InterruptedException e) {
-                    throw new IllegalStateException(e);
-                }
-            } while (true);
+            // loop around
         }
     }
 
-    public ArtifactImpl<?> verifyArtifact(Artifact<?> artifact) {
-        Objects.requireNonNull(artifact, "artifact cannot be null");
+    private boolean loadAllowsAnotherBuild(BuildInfo buildInfo) {
+        float currentTargetLoad = targetLoad > 0 ? targetLoad : -targetLoad * Runtime.getRuntime().availableProcessors();
 
-        if (!(artifact instanceof ArtifactImpl)) {
-            throw new IllegalArgumentException("not an artifact of this build graph: " + artifact.toString());
-        }
-        ArtifactImpl<?> artifactImpl = (ArtifactImpl<?>) artifact;
-
-        ArtifactId artifactId = artifactImpl.artifactId();
-        ArtifactImpl<?> ourArtifactImpl;
-        synchronized (monitor) {
-            ourArtifactImpl = artifacts.get(artifactId);
-        }
-        Objects.requireNonNull(ourArtifactImpl, "no such artifact: " + artifact.toString());
-
-        if (ourArtifactImpl != artifact) {
-            // Not sure how this can happen...
-            throw new IllegalStateException("two artifacts with the same id: " + artifact.toString());
-        }
-
-        return artifactImpl;
+        // If adding another builds gets us within +- 0.5 of target load, or lower.
+        // The artificial load is artificial load is incremented preemptively, in case true is returned.
+        float newLoad = (loadx1000.get() + artificialLoadx1000.get()) / 1000.0f + 1f;
+        return newLoad < currentTargetLoad + 0.5f;
     }
 
-    /** Verify this graph owns the artifact, and that it belongs to the given build. */
-    public <T> ArtifactImpl<T> verifyArtifact(Artifact<T> artifact, BuildId buildId) {
-        Objects.requireNonNull(artifact, "artifact cannot be null");
-        Objects.requireNonNull(buildId, "buildId cannot be null");
+    private void updateLoad() {
+        long previousSumCpuTimes = lastSumCpuTimeNanos;
 
-        if (!(artifact instanceof ArtifactImpl)) {
-            throw new IllegalArgumentException("not an artifact of this build graph: " + artifact.toString());
-        }
-        ArtifactImpl<T> artifactImpl = (ArtifactImpl<T>) artifact;
+        long[] threadIds = threadMXBean.getAllThreadIds();
+        long[] threadCpuTimesNanos = threadMXBean.getThreadCpuTime(threadIds);
+        long sumCpuTimeNanos = LongStream.of(threadCpuTimesNanos).sum();
+        long nanos = Math.max(0L, sumCpuTimeNanos - previousSumCpuTimes);
 
-        ArtifactId artifactId = artifactImpl.artifactId();
-        ArtifactImpl<?> ourArtifactImpl;
-        BuildInfo buildInfo;
-        synchronized (monitor) {
-            ourArtifactImpl = artifacts.get(artifactId);
-            buildInfo = builds.get(buildId);
-        }
-        Objects.requireNonNull(ourArtifactImpl, "no such artifact: " + artifact.toString());
-        Objects.requireNonNull(buildInfo, "no such build: " + buildId);
-
-        if (ourArtifactImpl != artifact) {
-            // Not sure how this can happen...
-            throw new IllegalStateException("two artifacts with the same id: " + artifact.toString());
-        }
-
-        if (!buildInfo.production().contains(artifactId)) {
-            throw new IllegalArgumentException(artifactId + " is not an artifact of build " + buildId.toString());
-        }
-
-        return artifactImpl;
-    }
-
-    private BuildInfo getBuildInfo(BuildId buildId) {
-        synchronized (monitor) {
-            return Objects.requireNonNull(builds.get(buildId), "no build is associated with ID " + buildId.toString());
-        }
+        float newLoad = nanos / (1000_000f * loadUpdateIntervalInMillis);
+        loadx1000.set((long) (newLoad * 1000L));
+        lastSumCpuTimeNanos = sumCpuTimeNanos;
     }
 }

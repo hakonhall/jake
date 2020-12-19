@@ -9,6 +9,9 @@ public class ArtifactImpl<T> implements Artifact<T> {
     private final ArtifactId artifactId;
     private final Class<T> artifactClass;
 
+    // Set when (if) the build is defined
+    private BuildId buildId = null;
+
     private final Object monitor = new Object();
     private T instance = null;
 
@@ -21,6 +24,7 @@ public class ArtifactImpl<T> implements Artifact<T> {
     @Override public Optional<String> moduleName() { return artifactId.moduleName(); }
     @Override public String name() { return artifactId.artifactName(); }
     public Class<T> instanceClass() { return artifactClass; }
+    public BuildId buildId() { return Objects.requireNonNull(buildId, "build ID has not yet been set"); }
 
     public void publish(T instance) {
         if (artifactClass == Void.class) {
@@ -54,5 +58,9 @@ public class ArtifactImpl<T> implements Artifact<T> {
     @Override
     public String toString() {
         return artifactId.toString() + " of type " + artifactClass.getName();
+    }
+
+    public void setBuildId(BuildId buildId) {
+        this.buildId = Objects.requireNonNull(buildId);
     }
 }

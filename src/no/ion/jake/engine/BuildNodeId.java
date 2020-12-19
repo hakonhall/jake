@@ -1,4 +1,6 @@
 package no.ion.jake.engine;
 
-public class BuildNodeId {
+import no.ion.jake.graph.NodeId;
+
+public class BuildNodeId implements NodeId {
 }

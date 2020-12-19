@@ -31,6 +31,8 @@ public class JakeExecutor {
         loadFactorExecutorService.scheduleAtFixedRate(this::updateLoadFactor, 0, 100, TimeUnit.MILLISECONDS);
     }
 
+    public float targetLoad() { return targetLoad; }
+
     public void cancelAndWait() {}
 
     public void runAsync(Runnable runnable) {

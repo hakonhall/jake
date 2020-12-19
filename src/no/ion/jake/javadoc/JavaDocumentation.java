@@ -74,6 +74,7 @@ public class JavaDocumentation {
             // and we could depend on that.
             // Note: classesArtifact is actually not used other than ordering this build after java compile.
             declaration.dependsOn(classesArtifact);
+            sourceDirectoryArtifacts.forEach(declaration::dependsOn);
             // TODO: This should output an "optional Path": if no sources are found, no java doc should be generated, and
             // no javadoc jar should be created.
             Artifact<Path> documentation = declaration.producesArtifact(Path.class, "java documentation");
