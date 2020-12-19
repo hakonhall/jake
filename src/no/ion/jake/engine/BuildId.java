@@ -1,10 +1,12 @@
 package no.ion.jake.engine;
 
+import no.ion.jake.graph.NodeId;
+
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
-public class BuildId {
+public class BuildId implements NodeId {
     private final String moduleName;
     private final String id;
 

@@ -5,12 +5,12 @@ import no.ion.jake.build.Module;
 import no.ion.jake.build.ModuleContext;
 
 public class DeclaratorImpl implements Declarator {
-    private final BuildGraph buildGraph;
+    private final BuildSet buildSet;
     private final ModuleContext moduleContext;
     private final Module module;
 
-    public DeclaratorImpl(BuildGraph buildGraph, ModuleContext moduleContext, Module module) {
-        this.buildGraph = buildGraph;
+    public DeclaratorImpl(BuildSet buildSet, ModuleContext moduleContext, Module module) {
+        this.buildSet = buildSet;
         this.moduleContext = moduleContext;
         this.module = module;
     }
@@ -22,7 +22,7 @@ public class DeclaratorImpl implements Declarator {
 
     @Override
     public BuildDeclarationImpl declareNewBuild() {
-        return new BuildDeclarationImpl(buildGraph, moduleContext, module);
+        return new BuildDeclarationImpl(buildSet, moduleContext, module);
     }
 
     @Override

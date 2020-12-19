@@ -43,11 +43,9 @@ public class JavaSource {
                     .map(directory -> new PendingPublication<>(declaration.producesArtifact(Path.class, "source directory"), directory))
                     .collect(Collectors.toList());
 
-            JavaSourceArtifacts javaSourceArtifacts = new JavaSourceArtifacts(javaFilesArtifact, sourceDirectories);
-
             declaration.forBuild(new JavaSourceScan(name, sourceDirectories));
 
-            return javaSourceArtifacts;
+            return new JavaSourceArtifacts(javaFilesArtifact, sourceDirectories);
         }
     }
 }

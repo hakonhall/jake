@@ -4,10 +4,9 @@ import no.ion.jake.AbortException;
 import no.ion.jake.LogSink;
 import no.ion.jake.Project;
 import no.ion.jake.build.ModuleContext;
-import no.ion.jake.engine.BuildGraph;
+import no.ion.jake.engine.BuildSet;
 import no.ion.jake.engine.DeclaratorImpl;
 import no.ion.jake.engine.JakeExecutor;
-import no.ion.jake.engine.SingleBuildDriver;
 import no.ion.jake.java.Jar;
 import no.ion.jake.java.Javac;
 import no.ion.jake.javadoc.Javadoc;
@@ -154,9 +153,8 @@ public class Main {
         Javadoc javadoc = new Javadoc();
         MavenCentral mavenCentral = new MavenCentral();
         MavenRepository mavenRepository = new MavenRepository(project.pathToMavenRepository(), mavenCentral);
-        var driver = new SingleBuildDriver(logSink);
         var executor = new JakeExecutor(threads);
-        var buildGraph = new BuildGraph(executor, logSink, driver);
+        var buildGraph = new BuildSet(executor, logSink);
 
         final TestutilModule testutilModule;
         {
