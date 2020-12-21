@@ -4,19 +4,19 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class ArtifactId {
-    private final Optional<String> moduleName;
+    private final String namespace;
     private final String artifactName;
 
-    public ArtifactId(String moduleNameOrNull, String artifactName) {
-        this.moduleName = Optional.ofNullable(moduleNameOrNull);
+    public ArtifactId(String namespace, String artifactName) {
+        this.namespace = Objects.requireNonNull(namespace, "namespace must be non-null");
         this.artifactName = Objects.requireNonNull(artifactName, "artifactName must be non-null");
     }
 
-    public Optional<String> moduleName() { return moduleName; }
+    public String namespace() { return namespace; }
     public String artifactName() { return artifactName; }
 
     @Override
     public String toString() {
-        return moduleName().map(name -> artifactName + " in module " + name).orElseGet(() -> "global artifact " + artifactName);
+        return "ArtifactId{" + namespace + ":" + artifactName + "}";
     }
 }

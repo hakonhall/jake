@@ -41,7 +41,7 @@ public class JUnit4TestRunDeclaration {
             classPath.forEach(entry -> entry.getArtifact().ifPresent(buildDeclaration::dependsOn));
             // Note: This will duplicate a class path entry, if the class path entry is correct
             buildDeclaration.dependsOn(testClassesArtifact);
-            Artifact<Void> testArtifact = buildDeclaration.producesArtifact(Void.class, "test");
+            Artifact<Void> testArtifact = buildDeclaration.producesArtifact(Void.class, "tests passed");
             var testRun = new JUnit4TestRun(name, testClassesArtifact, classPath, testArtifact);
             buildDeclaration.forBuild(testRun);
             return testArtifact;

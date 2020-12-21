@@ -91,7 +91,7 @@ public class YoleanModule implements JavaModule {
                 .map(mavenArtifact -> mavenRepository.declareDownload(declarator, mavenArtifact))
                 .collect(Collectors.toList());
 
-        Artifact<Path> classesArtifact = new JavaCompiler(javac, "source compilation")
+        Artifact<Path> classesArtifact = new JavaCompiler(javac, null)
                 .addSourceFilesArtifact(sourceArtifacts.javaFilesArtifact())
                 .addClassPathEntries(providedMavenArtifacts.stream().map(ClassPathEntry::fromMavenArtifact).collect(Collectors.toList()))
                 .addJavacArguments(List.of(
@@ -106,7 +106,7 @@ public class YoleanModule implements JavaModule {
                 .includeFiles(moduleContext.pathOf("src/test/java"), true, PathPattern.of("*.java"))
                 .declareScan();
 
-        Artifact<Path> testClassesArtifact = new JavaCompiler(javac, "test compilation")
+        Artifact<Path> testClassesArtifact = new JavaCompiler(javac, "test")
                 .addSourceFilesArtifact(testSourceArtifact)
                 .addClassPathEntries(providedMavenArtifacts.stream().map(ClassPathEntry::fromMavenArtifact).collect(Collectors.toList()))
                 .addClassPathEntries(testMavenArtifacts.stream().map(ClassPathEntry::fromMavenArtifact).collect(Collectors.toList()))

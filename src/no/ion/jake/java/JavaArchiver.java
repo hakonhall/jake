@@ -64,7 +64,7 @@ public class JavaArchiver {
                 declaration.dependsOn(manifestPathArtifact);
             }
 
-            Artifact<Path> jarArtifact = declaration.producesArtifact(Path.class, "jar");
+            Artifact<Path> jarArtifact = declaration.producesArtifact(Path.class, path.getFileName().toString());
             declaration.forBuild(new JavaArchiverBuild(jar, name, mode, directoryArtifacts, path, mainClass,
                     manifestPathArtifact, jarArtifact));
             return jarArtifact;

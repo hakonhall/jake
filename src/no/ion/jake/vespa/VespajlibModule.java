@@ -114,7 +114,7 @@ public class VespajlibModule implements JavaModule {
                 .collect(Collectors.toList());
         testMavenArtifacts.add(testutilModule.mavenArtifact());
 
-        Artifact<Path> classesArtifact = new JavaCompiler(javac, "source compilation")
+        Artifact<Path> classesArtifact = new JavaCompiler(javac, null)
                 .addSourceFilesArtifact(sourceArtifacts.javaFilesArtifact())
                 .addClassPathEntries(providedMavenArtifacts.stream().map(ClassPathEntry::fromMavenArtifact).collect(Collectors.toList()))
                 .addClassPathEntries(compileMavenArtifacts.stream().map(ClassPathEntry::fromMavenArtifact).collect(Collectors.toList()))
@@ -129,7 +129,7 @@ public class VespajlibModule implements JavaModule {
                 .includeFiles(moduleContext.pathOf("src/test/java"), true, PathPattern.of("*.java"))
                 .declareScan();
 
-        Artifact<Path> testClassesArtifact = new JavaCompiler(javac, "test compilation")
+        Artifact<Path> testClassesArtifact = new JavaCompiler(javac, "test")
                 .addSourceFilesArtifact(testSourceArtifact)
                 .addClassPathEntries(providedMavenArtifacts.stream().map(ClassPathEntry::fromMavenArtifact).collect(Collectors.toList()))
                 .addClassPathEntries(compileMavenArtifacts.stream().map(ClassPathEntry::fromMavenArtifact).collect(Collectors.toList()))

@@ -19,10 +19,10 @@ public class AbiChecker {
         try (var declaration = declarator.declareNewBuild()) {
             declaration.dependsOn(jarPathArtifact);
 
-            Artifact<Void> checkArtifact = declaration.producesArtifact(Void.class, "abi check");
+            Artifact<Void> checkArtifact = declaration.producesArtifact(Void.class, "abi verified");
 
             declaration.forBuild(new Build() {
-                @Override public String name() { return module.moduleName(); }
+                @Override public String name() { return "abi check"; }
 
                 @Override
                 public void build(BuildContext buildContext) {

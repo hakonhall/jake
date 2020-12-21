@@ -15,20 +15,16 @@ public class DeclaratorImpl implements Declarator {
         this.module = module;
     }
 
-    @Override
-    public ModuleContext moduleContext() {
-        return moduleContext;
-    }
+    @Override public ModuleContext moduleContext() { return moduleContext; }
+    @Override public String moduleName() { return module.moduleName(); }
 
     @Override
     public BuildDeclarationImpl declareNewBuild() {
-        return new BuildDeclarationImpl(buildSet, moduleContext, module);
+        return new BuildDeclarationImpl(buildSet, moduleContext, module.moduleName());
     }
 
     @Override
-    public BuildDeclarationImpl declareGlobalBuild() {
-        // todo
-        return declareNewBuild();
+    public BuildDeclaration declareNewBuild(String namespace) {
+        return new BuildDeclarationImpl(buildSet, moduleContext, namespace);
     }
-
 }

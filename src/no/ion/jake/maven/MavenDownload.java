@@ -20,7 +20,7 @@ public class MavenDownload implements Build {
 
     @Override
     public String name() {
-        return mavenArtifact.id().toCoordinate();
+        return "downloading " + mavenArtifact.id().toCoordinate();
     }
 
     public MavenArtifact mavenArtifact() {

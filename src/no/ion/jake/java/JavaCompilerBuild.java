@@ -16,18 +16,18 @@ import static no.ion.jake.util.Exceptions.uncheckIO;
 
 public class JavaCompilerBuild implements Build {
     private final Javac javac;
-    private final String name;
+    private final String nameOrNull;
     private final List<Artifact<FileSet2>> sourceFileArtifacts;
     private final List<String> passthroughJavacArguments;
     private final List<ClassPathEntry> classPath;
     private final Path destinationDirectory;
     private final Artifact<Path> destinationDirectoryArtifact;
 
-    public JavaCompilerBuild(Javac javac, String name, List<Artifact<FileSet2>> sourceFileArtifacts,
+    public JavaCompilerBuild(Javac javac, String nameOrNull, List<Artifact<FileSet2>> sourceFileArtifacts,
                              List<String> passthroughJavacArguments, List<ClassPathEntry> classPath, Path destinationDirectory,
                              Artifact<Path> destinationDirectoryArtifact) {
         this.javac = javac;
-        this.name = name;
+        this.nameOrNull = nameOrNull;
         this.sourceFileArtifacts = List.copyOf(sourceFileArtifacts);
         this.passthroughJavacArguments = List.copyOf(passthroughJavacArguments);
         this.classPath = List.copyOf(classPath);
@@ -37,7 +37,8 @@ public class JavaCompilerBuild implements Build {
 
     @Override
     public String name() {
-        return name;
+        String prefix = (nameOrNull == null || nameOrNull.isEmpty()) ? "" : nameOrNull + " ";
+        return prefix + "source compilation";
     }
 
     @Override

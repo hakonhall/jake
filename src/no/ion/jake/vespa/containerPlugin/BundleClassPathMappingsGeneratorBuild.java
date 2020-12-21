@@ -41,7 +41,7 @@ public class BundleClassPathMappingsGeneratorBuild implements Build {
                 // jdisc_core_test/test_bundles/cert-b jdisc_core_test/test_bundles/cert-l1-dup messagebus-disc
                 // metrics-proxy container-core container-search-and-docproc hosted-tenant-base provided-dependencies
                 // jdisc_core config-model-fat container-messagebus
-                .setBundleSymbolicName(buildContext.moduleName());
+                .setBundleSymbolicName(buildContext.namespace());
 
         GenerateBundleClassPathMappings.execute(params);
 

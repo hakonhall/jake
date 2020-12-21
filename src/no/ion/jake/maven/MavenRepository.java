@@ -28,8 +28,8 @@ public class MavenRepository {
                 return download.mavenArtifact();
             }
 
-            try (var declaration = declarator.declareGlobalBuild()) {
-                Artifact<Path> artifact = declaration.producesGlobalArtifact(Path.class, mavenArtifactId.toCoordinate());
+            try (var declaration = declarator.declareNewBuild("maven")) {
+                Artifact<Path> artifact = declaration.producesArtifact(Path.class, mavenArtifactId.toCoordinate());
                 MavenDownload mavenDownload = new MavenDownload(mavenCentral, localRepo, mavenArtifactId, artifact);
                 declaration.forBuild(mavenDownload);
                 downloads.put(mavenArtifactId, mavenDownload);

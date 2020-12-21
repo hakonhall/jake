@@ -70,7 +70,7 @@ public class FileTreeScanner implements Build {
         this.fileSetArtifact = fileSetArtifact;
     }
 
-    @Override public String name() { return name; }
+    @Override public String name() { return "finding " + name; }
 
     @Override
     public void build(BuildContext buildContext) {

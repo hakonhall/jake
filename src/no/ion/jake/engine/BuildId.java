@@ -7,20 +7,20 @@ import java.util.Objects;
 import static java.util.Objects.requireNonNull;
 
 public class BuildId implements NodeId {
-    private final String moduleName;
+    private final String namespace;
     private final String id;
 
-    public BuildId(String moduleName, String id) {
-        this.moduleName = requireNonNull(moduleName, "moduleName must be non-null");
+    public BuildId(String namespace, String id) {
+        this.namespace = requireNonNull(namespace, "moduleName must be non-null");
         this.id = requireNonNull(id, "id must be non-null");
     }
 
-    public String moduleName() { return moduleName; }
+    public String namespace() { return namespace; }
     public String id() { return id; }
 
     @Override
     public String toString() {
-        return id + " in module " + moduleName;
+        return id + " in module " + namespace;
     }
 
     @Override
@@ -28,12 +28,12 @@ public class BuildId implements NodeId {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         BuildId buildId = (BuildId) o;
-        return moduleName.equals(buildId.moduleName) &&
+        return namespace.equals(buildId.namespace) &&
                 id.equals(buildId.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(moduleName, id);
+        return Objects.hash(namespace, id);
     }
 }
