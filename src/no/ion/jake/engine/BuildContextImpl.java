@@ -25,10 +25,10 @@ public class BuildContextImpl implements BuildContext, AutoCloseable {
 
     public BuildContextImpl(ArtifactRegistry artifactRegistry, LogSink logSink, BuildInfo buildInfo) {
         this.artifactRegistry = artifactRegistry;
-        this.logger = new Logger(logSink, buildInfo.module().moduleName());
+        this.logger = new Logger(logSink, buildInfo.namespace());
         this.buildInfo = buildInfo;
         this.moduleContext = buildInfo.moduleContext();
-        this.moduleName = buildInfo.module().moduleName();
+        this.moduleName = buildInfo.namespace();
         this.buildId = buildInfo.id();
         this.runningStopwatch = Stopwatch.start();
     }
@@ -40,7 +40,7 @@ public class BuildContextImpl implements BuildContext, AutoCloseable {
     }
 
     @Override
-    public String moduleName() {
+    public String namespace() {
         verifyOpen();
         return moduleName;
     }

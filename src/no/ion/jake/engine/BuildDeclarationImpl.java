@@ -3,7 +3,6 @@ package no.ion.jake.engine;
 import no.ion.jake.build.Artifact;
 import no.ion.jake.build.Build;
 import no.ion.jake.build.Declarator;
-import no.ion.jake.build.Module;
 import no.ion.jake.build.ModuleContext;
 
 import java.util.ArrayList;
@@ -16,15 +15,15 @@ public class BuildDeclarationImpl implements Declarator.BuildDeclaration {
     private final Set<ArtifactImpl<?>> production = new HashSet<>();
     private final BuildSet buildSet;
     private final ModuleContext moduleContext;
-    private final Module module;
+    private final String namespace;
 
     private Build build = null;
     private boolean closed = false;
 
-    public BuildDeclarationImpl(BuildSet buildSet, ModuleContext moduleContext, Module module) {
+    public BuildDeclarationImpl(BuildSet buildSet, ModuleContext moduleContext, String namespace) {
         this.buildSet = buildSet;
         this.moduleContext = moduleContext;
-        this.module = module;
+        this.namespace = namespace;
     }
 
     @Override
@@ -39,20 +38,15 @@ public class BuildDeclarationImpl implements Declarator.BuildDeclaration {
 
     @Override
     public <T> ArtifactImpl<T> producesArtifact(Class<T> type, String name) {
-        return producesArtifact(type, module.moduleName(), name);
+        return producesArtifact(type, name, namespace);
     }
 
-    @Override
-    public <T> ArtifactImpl<T> producesGlobalArtifact(Class<T> type, String name) {
-        return producesArtifact(type, null, name);
-    }
-
-    private <T> ArtifactImpl<T> producesArtifact(Class<T> type, String moduleNameOrNull, String name) {
+    private <T> ArtifactImpl<T> producesArtifact(Class<T> type, String name, String namespace) {
         if (closed) {
             throw new IllegalStateException("it's illegal to invoke producesArtifact() after close()");
         }
 
-        ArtifactImpl<T> artifactImpl = buildSet.newArtifact(type, moduleNameOrNull, name);
+        ArtifactImpl<T> artifactImpl = buildSet.newArtifact(type, namespace, name);
 
         if (production.contains(artifactImpl)) {
             throw new IllegalArgumentException("duplicate production of artifact '" + name + "'");
@@ -83,6 +77,6 @@ public class BuildDeclarationImpl implements Declarator.BuildDeclaration {
             throw new IllegalStateException("bindTo() has not been invoked");
         }
 
-        buildSet.addBuild(moduleContext, module, build, dependencies, production);
+        buildSet.addBuild(moduleContext, namespace, build, dependencies, production);
     }
 }

@@ -3,7 +3,6 @@ package no.ion.jake.engine;
 import no.ion.jake.build.Artifact;
 
 import java.util.Objects;
-import java.util.Optional;
 
 public class ArtifactImpl<T> implements Artifact<T> {
     private final ArtifactId artifactId;
@@ -21,7 +20,7 @@ public class ArtifactImpl<T> implements Artifact<T> {
     }
 
     public ArtifactId artifactId() { return artifactId; }
-    @Override public Optional<String> moduleName() { return artifactId.moduleName(); }
+    @Override public String namespace() { return artifactId.namespace(); }
     @Override public String name() { return artifactId.artifactName(); }
     public Class<T> instanceClass() { return artifactClass; }
     public BuildId buildId() { return Objects.requireNonNull(buildId, "build ID has not yet been set"); }

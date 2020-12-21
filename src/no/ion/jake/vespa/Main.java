@@ -3,6 +3,7 @@ package no.ion.jake.vespa;
 import no.ion.jake.AbortException;
 import no.ion.jake.LogSink;
 import no.ion.jake.Project;
+import no.ion.jake.build.Build;
 import no.ion.jake.build.ModuleContext;
 import no.ion.jake.engine.BuildSet;
 import no.ion.jake.engine.DeclaratorImpl;
@@ -22,9 +23,7 @@ import java.util.logging.Level;
 
 public class Main {
     private final Project project;
-    private final float threads;
-    private final boolean verbose;
-    private final boolean logTime;
+    private final Options options;
 
     public static void main(String[] args) {
         try {
@@ -40,41 +39,39 @@ public class Main {
     }
 
     private static int main2(String[] args) {
-        Path projectPath = Path.of(".");
-        Path jarPath = null;
-        boolean verbose = false;
-        boolean logTime = false;
-        int processors = Runtime.getRuntime().availableProcessors();
-        float threads = processors;
+        Options options = new Options();
 
         for (int i = 0; i < args.length; ++i) {
             String arg = args[i];
             switch (arg) {
                 case "--jar":
-                    jarPath = Path.of(args[++i]);
+                    options.setJarPath(Path.of(args[++i]));
+                    continue;
+                case "--dot":
+                    options.setDotPath(Path.of(args[++i]));
                     continue;
                 case "-p":
                 case "--project":
-                    projectPath = Path.of(args[++i]);
+                    options.setProjectPath(Path.of(args[++i]));
                     continue;
                 case "-T":
                 case "--threads":
                     arg = args[++i];
                     if (arg.endsWith("C")) {
-                        threads = Float.parseFloat(arg.substring(0, arg.length() - 1)) * processors;
+                        options.setThreadsPerHardwareThread(Float.parseFloat(arg.substring(0, arg.length() - 1)));
                     } else {
-                        threads = Float.parseFloat(arg);
+                        options.setThreads(Float.parseFloat(arg));
                     }
-                    if (threads < 0f) {
+                    if (options.threads() < 0f) {
                         throw new UserError("negative #threads specified");
                     }
                     continue;
                 case "--time":
-                    logTime = true;
+                    options.setLogTime(true);
                     continue;
                 case "-v":
                 case "--verbose":
-                    verbose = true;
+                    options.setVerbose(true);
                     continue;
             }
 
@@ -85,34 +82,19 @@ public class Main {
             }
         }
 
-        if (jarPath == null) {
-            throw new UserError("missing --jar");
-        } else if (!jarPath.toString().endsWith(".jar")) {
-            throw new UserError("--jar file does not end in .jar: " + jarPath);
-        } else if (!Files.isRegularFile(jarPath)) {
-            throw new UserError("no such file: " + jarPath);
-        }
+        options.validateAndNormalize();
+        Project project = new Project(options.projectPath(), options.jarPath());
 
-        threads = Math.max(1f, threads);
-
-        if (!Files.isDirectory(projectPath)) {
-            throw new UserError("no such directory: " + projectPath);
-        }
-        projectPath = projectPath.toAbsolutePath();
-        Project project = new Project(projectPath, jarPath);
-
-        return new Main(project, threads, verbose, logTime).run();
+        return new Main(project, options).run();
     }
 
-    private Main(Project project, float threads, boolean verbose, boolean logTime) {
+    private Main(Project project, Options options) {
         this.project = project;
-        this.threads = threads;
-        this.verbose = verbose;
-        this.logTime = logTime;
+        this.options = options;
     }
 
     private int run() {
-        LogSink logSink = new PrintStreamLogSink(System.out, verbose ? Level.FINEST : Level.INFO, logTime);
+        LogSink logSink = new PrintStreamLogSink(System.out, options.verbose() ? Level.FINEST : Level.INFO, options.logTime());
 
         // Our program would like to print progress to System.out and never write to err.
         // Unfortunately, tests may print to out/err, and the JVM may print e.g. "WARNING: An illegal reflective
@@ -153,14 +135,14 @@ public class Main {
         Javadoc javadoc = new Javadoc();
         MavenCentral mavenCentral = new MavenCentral();
         MavenRepository mavenRepository = new MavenRepository(project.pathToMavenRepository(), mavenCentral);
-        var executor = new JakeExecutor(threads);
-        var buildGraph = new BuildSet(executor, logSink);
+        var executor = new JakeExecutor(options.threads());
+        var buildSet = new BuildSet(executor, logSink);
 
         final TestutilModule testutilModule;
         {
             var testutilContext2 = new ModuleContext(project, project.path().resolve("testutil").normalize());
             testutilModule = new TestutilModule(testutilContext2, mavenRepository, javac, jar, javadoc);
-            var testutilConstruction = new DeclaratorImpl(buildGraph, testutilContext2, testutilModule);
+            var testutilConstruction = new DeclaratorImpl(buildSet, testutilContext2, testutilModule);
             testutilModule.declareBuilds(testutilConstruction);
         }
 
@@ -168,7 +150,7 @@ public class Main {
         {
             var yoleanContext2 = new ModuleContext(project, project.path().resolve("yolean").normalize());
             yoleanModule = new YoleanModule(yoleanContext2, mavenRepository, javac, jar, javadoc);
-            var yoleanConstruction = new DeclaratorImpl(buildGraph, yoleanContext2, yoleanModule);
+            var yoleanConstruction = new DeclaratorImpl(buildSet, yoleanContext2, yoleanModule);
             yoleanModule.declareBuilds(yoleanConstruction);
         }
 
@@ -177,13 +159,19 @@ public class Main {
             var vespajlibContext2 = new ModuleContext(project, project.path().resolve("vespajlib").normalize());
             vespajlibModule = new VespajlibModule(vespajlibContext2, mavenRepository, javac, jar, javadoc,
                     testutilModule, yoleanModule);
-            var vespajlibConstruction = new DeclaratorImpl(buildGraph, vespajlibContext2, vespajlibModule);
+            var vespajlibConstruction = new DeclaratorImpl(buildSet, vespajlibContext2, vespajlibModule);
             vespajlibModule.declareBuilds(vespajlibConstruction);
         }
 
-        buildGraph.buildEverything();
-
-        logSink.log(Level.INFO, "SUCCESS", null);
+        switch (options.mode()) {
+            case BUILD:
+                buildSet.buildEverything();
+                logSink.log(Level.INFO, "SUCCESS", null);
+                break;
+            case GRAPHVIZ:
+                buildSet.printGraphviz(options.dotPath());
+                break;
+        }
 
         return 0;
     }

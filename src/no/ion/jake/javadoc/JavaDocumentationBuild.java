@@ -86,7 +86,7 @@ public class JavaDocumentationBuild implements Build {
             arguments.add(bottom);
         }
 
-        String title = buildContext.moduleName() + " " + mavenArtifactId.version() + " API";
+        String title = buildContext.namespace() + " " + mavenArtifactId.version() + " API";
         arguments.add("-doctitle");
         arguments.add(title);
         arguments.add("-windowtitle");

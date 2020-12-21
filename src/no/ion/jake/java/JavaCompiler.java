@@ -10,7 +10,7 @@ import java.util.List;
 
 public class JavaCompiler {
     private final Javac javac;
-    private final String name;
+    private final String nameOrNull;
     private final List<Artifact<FileSet2>> sourceFilesArtifacts = new ArrayList<>();
     private final List<String> passthroughJavacArguments = new ArrayList<>();
     private final List<ClassPathEntry> classPath = new ArrayList<>();
@@ -18,9 +18,9 @@ public class JavaCompiler {
 
     private boolean declareCompileCalled = false;
 
-    public JavaCompiler(Javac javac, String name) {
+    public JavaCompiler(Javac javac, String nameOrNull) {
         this.javac = javac;
-        this.name = name;
+        this.nameOrNull = nameOrNull;
     }
 
     public JavaCompiler addSourceFilesArtifact(Artifact<FileSet2> sourceFiles) {
@@ -57,8 +57,9 @@ public class JavaCompiler {
         try (Declarator.BuildDeclaration compilation = declarator.declareNewBuild()) {
             sourceFilesArtifacts.forEach(compilation::dependsOn);
             classPath.forEach(entry -> entry.getArtifact().ifPresent(compilation::dependsOn));
-            Artifact<Path> destinationDirectoryArtifact = compilation.producesArtifact(Path.class, "classes");
-            compilation.forBuild(new JavaCompilerBuild(javac, name, sourceFilesArtifacts, passthroughJavacArguments, classPath,
+            String artifactNamePrefix = (nameOrNull == null || nameOrNull.isEmpty()) ? "" : nameOrNull + " ";
+            Artifact<Path> destinationDirectoryArtifact = compilation.producesArtifact(Path.class, artifactNamePrefix + "classes");
+            compilation.forBuild(new JavaCompilerBuild(javac, nameOrNull, sourceFilesArtifacts, passthroughJavacArguments, classPath,
                     destinationDirectory, destinationDirectoryArtifact));
             return destinationDirectoryArtifact;
         }

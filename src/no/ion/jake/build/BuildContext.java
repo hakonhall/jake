@@ -4,7 +4,9 @@ import java.time.Duration;
 
 public interface BuildContext {
     ModuleContext moduleContext();
-    String moduleName();
+
+    /** Namespace of the build, typically module name for builds associated with a module (unless overridden). */
+    String namespace();
     Logger log();
     Duration durationUpToNow();
 

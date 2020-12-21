@@ -3,26 +3,31 @@ package no.ion.jake.engine;
 import no.ion.jake.LogSink;
 import no.ion.jake.build.Artifact;
 import no.ion.jake.build.Build;
-import no.ion.jake.build.Module;
 import no.ion.jake.build.ModuleContext;
 import no.ion.jake.graph.BuildMeta;
 import no.ion.jake.graph.BuildOrder;
 import no.ion.jake.graph.BuildOrderImpl;
+import no.ion.jake.graphviz.Graphviz;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static no.ion.jake.util.Exceptions.uncheckIO;
 
 public class BuildSet {
     private final Object monitor = new Object();
     private final HashMap<ArtifactId, ArtifactImpl<?>> artifacts = new HashMap<>();
     private final HashMap<BuildId, BuildInfo> builds = new HashMap<>();
-    private final List<BuildInfo> buildInfoList = new ArrayList<>();
     private final JakeExecutor jakeExecutor;
     private final LogSink logSink;
 
@@ -31,8 +36,8 @@ public class BuildSet {
         this.logSink = logSink;
     }
 
-    public <T> ArtifactImpl<T> newArtifact(Class<T> artifactClass, String moduleNameOrNull, String name) {
-        var artifactId = new ArtifactId(moduleNameOrNull, name);
+    public <T> ArtifactImpl<T> newArtifact(Class<T> artifactClass, String namespace, String name) {
+        var artifactId = new ArtifactId(namespace, name);
         var artifact = new ArtifactImpl<>(artifactId, artifactClass);
 
         synchronized (monitor) {
@@ -44,7 +49,7 @@ public class BuildSet {
         return artifact;
     }
 
-    public void addBuild(ModuleContext moduleContext, Module module, Build build, List<Artifact<?>> dependencies,
+    public void addBuild(ModuleContext moduleContext, String namespace, Build build, List<Artifact<?>> dependencies,
                          Set<ArtifactImpl<?>> production) {
         Set<BuildId> buildIdDependencies = new HashSet<>();
 
@@ -54,14 +59,14 @@ public class BuildSet {
                 .map(ArtifactImpl::artifactId)
                 .collect(Collectors.toSet());
 
-        BuildId buildId = new BuildId(module.moduleName(), build.name());
+        BuildId buildId = new BuildId(namespace, build.name());
         Set<ArtifactId> productionSet = production.stream()
                 // TODO: Re-evaluate thread-safety
                 .peek(artifactImpl -> artifactImpl.setBuildId(buildId))
                 .map(ArtifactImpl::artifactId)
                 .collect(Collectors.toSet());
 
-        var info = new BuildInfo(buildId, moduleContext, module, build, dependencySet, productionSet, buildIdDependencies);
+        var info = new BuildInfo(buildId, moduleContext, namespace, build, dependencySet, productionSet, buildIdDependencies);
         synchronized (monitor) {
             if (!artifacts.keySet().containsAll(dependencySet)) {
                 throw new IllegalArgumentException(buildId.toString() + " depends on artifacts that no-one are producing");
@@ -70,8 +75,6 @@ public class BuildSet {
             if (builds.putIfAbsent(buildId, info) != null) {
                 throw new IllegalArgumentException("duplicate build: " + buildId.toString());
             }
-
-            buildInfoList.add(info);
         }
     }
 
@@ -168,5 +171,17 @@ public class BuildSet {
         }
 
         return artifactImpl;
+    }
+
+    public void printGraphviz(Path dotPath) {
+        var graphviz = new Graphviz(Map.copyOf(artifacts), Map.copyOf(builds));
+        var string = graphviz.make();
+        byte[] utf8bytes = string.toString().getBytes(StandardCharsets.UTF_8);
+        uncheckIO(() -> Files.write(dotPath, utf8bytes, StandardOpenOption.TRUNCATE_EXISTING));
+    }
+
+    private StringBuilder appendBuildId(StringBuilder builder, BuildId buildId) {
+        builder.append(buildId.namespace()).append(':').append(buildId.id());
+        return builder;
     }
 }
