@@ -38,6 +38,7 @@ vespa$ time mvn -nsu -pl yolean,testutil,vespajlib install
 real	0m16,348s
 user	2m9,961s
 sys	0m3,231s
+```
 
 ### Jake
 
