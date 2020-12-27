@@ -43,6 +43,7 @@ public class Graphviz {
             ++indentationLevel;
 
             append("label = \"").append(namespace).appendln("\";");
+            appendln("color = blue;");
 
             appendln("// Builds");
             builds.values().stream()
@@ -51,7 +52,7 @@ public class Graphviz {
                     .sorted(Comparator.comparing(buildInfo -> nameOf(buildInfo.id())))
                     .forEach(buildInfo -> {
                         appendIdOf(buildInfo.id());
-                        append(" [label = ").appendNameOf(buildInfo.id()).appendln("]");
+                        append(" [label = ").appendNameOf(buildInfo.id()).appendln(", shape=plaintext]");
                     });
 
             appendln("// Artifacts");
@@ -60,7 +61,7 @@ public class Graphviz {
                     .filter(artifact -> artifact.artifactId().namespace().equals(namespace))
                     .forEach(artifact -> {
                         appendIdOf(artifact.artifactId()).append(" [label = ").appendNameOf(artifact.artifactId())
-                                .appendln(", style=rounded, shape=diamond]");
+                                .appendln("]");
                     });
 
             --indentationLevel;

@@ -47,6 +47,10 @@ public class Main {
                 case "--jar":
                     options.setJarPath(Path.of(args[++i]));
                     continue;
+                case "--dep-graph":
+                    options.setDotPath(Path.of(args[++i]));
+                    options.setMode(Options.Mode.GRAPHVIZ);
+                    continue;
                 case "--dot":
                     options.setDotPath(Path.of(args[++i]));
                     continue;

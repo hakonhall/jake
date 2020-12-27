@@ -22,7 +22,7 @@ public class AbiChecker {
             Artifact<Void> checkArtifact = declaration.producesArtifact(Void.class, "abi verified");
 
             declaration.forBuild(new Build() {
-                @Override public String name() { return "abi check"; }
+                @Override public String name() { return "check abi"; }
 
                 @Override
                 public void build(BuildContext buildContext) {

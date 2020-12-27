@@ -13,14 +13,22 @@ public class MavenArtifactId {
     private final String artifactId;
     private final String versionOrNull;
     private final String classifierOrNull;
+
+    // TODO: Sort out what we actually mean: either packaging, type, or extension.
+    // See https://maven.apache.org/maven-core/artifact-handlers.html
     private final String packaging;
+
     private final Scope scope;
 
     public static MavenArtifactId from(String groupId, String artifactId) {
         return new MavenArtifactId(groupId, artifactId, null, null, null, null);
     }
 
-    /** Coordinate must be of the form GROUP:ID[:VERSION] or GROUP:ID:[VERSION]:CLASSIFIER. */
+    /**
+     * Coordinate must be of the form GROUP:ID[:VERSION] or GROUP:ID:[VERSION]:CLASSIFIER.
+     *
+     * <p>WARNING: Some coordinates are of the form GROUP:ID:TYPE:VERSION (TYPE or PACKAGING).</p>
+     */
     public static MavenArtifactId fromCoordinate(String coordinate) {
         if (coordinate.indexOf('/') != -1) {
             throw new UserError("bad maven coordinate: " + coordinate);
@@ -118,6 +126,7 @@ public class MavenArtifactId {
         return path.toString();
     }
 
+    /** Group ID, artifact ID, version, and classifier.  NOT type/packaging - use filename() for that. */
     public String toCoordinate() {
         if (versionOrNull == null) {
             if (classifierOrNull == null) {
@@ -133,6 +142,8 @@ public class MavenArtifactId {
             }
         }
     }
+
+    private static String nullAsEmpty(String stringOrNull) { return stringOrNull == null ? "" : stringOrNull; }
 
     @Override
     public String toString() {
