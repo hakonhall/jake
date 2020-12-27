@@ -42,10 +42,10 @@ public class ArtifactInstaller {
             pathArtifact.getArtifact().ifPresent(declaration::dependsOn);
             dependencies.forEach(declaration::dependsOn);
 
-            Artifact<Path> toPathArtifact = declaration.producesArtifact(Path.class, mavenArtifactId.toCoordinate());
+            Artifact<Path> toPathArtifact = declaration.producesArtifact(Path.class, mavenArtifactId.toRepoPath());
 
             declaration.forBuild(new Build() {
-                @Override public String name() { return "install of " + mavenArtifactId.toString(); }
+                @Override public String name() { return "install of " + mavenArtifactId.toRepoPath(); }
 
                 @Override
                 public void build(BuildContext buildContext) {

@@ -17,7 +17,10 @@ public class Options {
     public enum Mode { BUILD, GRAPHVIZ }
     public void setDotPath(Path dotPath) {
         this.dotPath = Objects.requireNonNull(dotPath);
-        mode = Mode.GRAPHVIZ;
+    }
+
+    public void setMode(Mode mode) {
+        this.mode = mode;
     }
 
     public void setJarPath(Path jarPath) {
