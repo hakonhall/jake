@@ -31,7 +31,7 @@ public class JavaSource {
 
     public JavaSourceArtifacts declareScan(Declarator declarator) {
         // The file scan is delegated to FileTreeScanner
-        FileTreeScanner.Builder scanner = FileTreeScanner.newBuilder(declarator, "java files");
+        FileTreeScanner.Builder scanner = FileTreeScanner.newBuilder(declarator, "java source");
         directories.forEach(directory -> scanner.includeFiles(directory, false, PathPattern.of("*.java")));
         Artifact<FileSet2> javaFilesArtifact = scanner.declareScan();
 

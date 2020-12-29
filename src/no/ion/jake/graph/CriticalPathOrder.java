@@ -1,6 +1,7 @@
 package no.ion.jake.graph;
 
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,9 +25,23 @@ public class CriticalPathOrder<ID extends NodeId> implements BuildOrder<ID> {
 
         Graph<BuildNode<ID_>> graph = Graph.fromAdapter(buildNodes, adapter);
 
-        for (Vertex<BuildNode<ID_>> leafVertex : graph.leaves()) {
-            calculateAndSetMinTimeSeconds(leafVertex);
-        }
+        DepthFirstSearch.Listener<BuildNode<ID_>> listener = new DepthFirstSearch.Listener<BuildNode<ID_>>() {
+            @Override
+            public void onStartOfVisit(Vertex<BuildNode<ID_>> vertex) {
+                // nothing
+            }
+
+            @Override
+            public void onEndOfVisit(Vertex<BuildNode<ID_>> vertex) {
+                float minDependencies = vertex.dependencies().stream()
+                        .map(v -> v.get().minTimeSeconds())
+                        .min(Comparator.comparingDouble(x -> x))
+                        .orElse(0f);
+                vertex.get().updateMinTimeSeconds(minDependencies);
+            }
+        };
+
+        DepthFirstSearch.traverse(graph, listener);
 
         return new CriticalPathOrder<>(graph);
     }
