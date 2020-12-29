@@ -9,9 +9,7 @@ import java.lang.management.ManagementFactory;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -35,6 +33,7 @@ public class BuildGraph implements AutoCloseable {
     private final float targetLoad;
     private final AtomicLong loadx1000 = new AtomicLong(0L);
     private final AtomicLong artificialLoadx1000 = new AtomicLong(0L);
+    private final AtomicLong pendingArtificialLoadx1000 = new AtomicLong(0L);
 
     private final Object monitor = new Object();
 
@@ -116,15 +115,12 @@ public class BuildGraph implements AutoCloseable {
 
         buildOrder.reportActiveBuild(buildId);
 
-        // preempt updateLoad: add 1 to avoid multiple runMoreBuilds to schedule many builds before the load
-        // is updated to reflect the newly added builds.  This must be decremented once the build starts.
-        // TODO: Add decrement elsewhere.
-        // TODO: Add something other than 1, e.g. expectedLoad + delta.
+        // TODO: Add something other than 1, e.g. expectedLoad + slack.
         final long loadx1000 = 1000L;
         artificialLoadx1000.addAndGet(loadx1000);
 
         jakeExecutor.runAsync(() -> {
-            artificialLoadx1000.addAndGet(-loadx1000);
+            pendingArtificialLoadx1000.addAndGet(-loadx1000);
 
             SingleBuildDriver driver = new SingleBuildDriver(logSink);
             BuildResult result = driver.runSync(artifactRegistry, buildInfo);
@@ -203,5 +199,7 @@ public class BuildGraph implements AutoCloseable {
         float newLoad = nanos / (1000_000f * loadUpdateIntervalInMillis);
         loadx1000.set((long) (newLoad * 1000L));
         lastSumCpuTimeNanos = sumCpuTimeNanos;
+
+        artificialLoadx1000.addAndGet(pendingArtificialLoadx1000.getAndSet(0L));
     }
 }

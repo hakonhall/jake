@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import static no.ion.jake.util.Exceptions.uncheckIO;
@@ -88,8 +89,80 @@ public class BuildSet {
 
                     @Override
                     public Duration expectedBuildDuration() {
+                        switch (buildInfo.id().toString()) {
+                            case "check abi in module vespajlib": return Duration.ofMillis(51);
+                            case "check abi in module yolean": return Duration.ofMillis(45);
+                            case "downloading com.fasterxml.jackson.core:jackson-annotations:2.8.11 in module maven": return Duration.ofMillis(0);
+                            case "downloading com.fasterxml.jackson.core:jackson-core:2.8.11 in module maven": return Duration.ofMillis(0);
+                            case "downloading com.fasterxml.jackson.core:jackson-databind:2.8.11.6 in module maven": return Duration.ofMillis(0);
+                            case "downloading com.google.guava:guava:20.0 in module maven": return Duration.ofMillis(0);
+                            case "downloading com.google.inject:guice:3.0:no_aop in module maven": return Duration.ofMillis(0);
+                            case "downloading com.google.jimfs:jimfs:1.1 in module maven": return Duration.ofMillis(0);
+                            case "downloading com.yahoo.vespa:annotations:7-SNAPSHOT in module maven": return Duration.ofMillis(0);
+                            case "downloading junit:junit:4.12 in module maven": return Duration.ofMillis(0);
+                            case "downloading net.bytebuddy:byte-buddy-agent:1.9.10 in module maven": return Duration.ofMillis(0);
+                            case "downloading net.bytebuddy:byte-buddy:1.9.10 in module maven": return Duration.ofMillis(0);
+                            case "downloading net.java.dev.jna:jna:4.5.2 in module maven": return Duration.ofMillis(0);
+                            case "downloading org.apache.commons:commons-exec:1.3 in module maven": return Duration.ofMillis(0);
+                            case "downloading org.hamcrest:hamcrest-core:1.3 in module maven": return Duration.ofMillis(0);
+                            case "downloading org.hamcrest:hamcrest-library:1.3 in module maven": return Duration.ofMillis(0);
+                            case "downloading org.lz4:lz4-java:1.7.1 in module maven": return Duration.ofMillis(0);
+                            case "downloading org.mockito:mockito-core:3.1.0 in module maven": return Duration.ofMillis(0);
+                            case "downloading org.objenesis:objenesis:2.6 in module maven": return Duration.ofMillis(0);
+                            case "downloading uk.co.datumedge:hamcrest-json:0.2 in module maven": return Duration.ofMillis(0);
+                            case "finding java source in module yolean": return Duration.ofMillis(14);
+                            case "finding java source in module testutil": return Duration.ofMillis(14);
+                            case "finding java source in module vespajlib": return Duration.ofMillis(20);
+                            case "finding test source in module yolean": return Duration.ofMillis(14);
+                            case "finding test source in module testutil": return Duration.ofMillis(14);
+                            case "finding test source in module vespajlib": return Duration.ofMillis(18);
+                            case "generate bundle classpath mappings file in module vespajlib": return Duration.ofMillis(0);
+                            case "generate bundle classpath mappings file in module yolean": return Duration.ofMillis(141);
+                            case "generate javadoc in module testutil": return Duration.ofMillis(510);
+                            case "generate javadoc in module vespajlib": return Duration.ofMillis(1506);
+                            case "generate javadoc in module yolean": return Duration.ofMillis(391);
+                            case "install of com/yahoo/vespa/testutil/7-SNAPSHOT/testutil-7-SNAPSHOT-javadoc.jar in module testutil": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/testutil/7-SNAPSHOT/testutil-7-SNAPSHOT-sources.jar in module testutil": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/testutil/7-SNAPSHOT/testutil-7-SNAPSHOT.jar in module testutil": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/testutil/7-SNAPSHOT/testutil-7-SNAPSHOT.pom in module testutil": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/vespajlib/7-SNAPSHOT/vespajlib-7-SNAPSHOT-javadoc.jar in module vespajlib": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/vespajlib/7-SNAPSHOT/vespajlib-7-SNAPSHOT-sources.jar in module vespajlib": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/vespajlib/7-SNAPSHOT/vespajlib-7-SNAPSHOT.jar in module vespajlib": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/vespajlib/7-SNAPSHOT/vespajlib-7-SNAPSHOT.pom in module vespajlib": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/yolean/7-SNAPSHOT/yolean-7-SNAPSHOT-javadoc.jar in module yolean": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/yolean/7-SNAPSHOT/yolean-7-SNAPSHOT-sources.jar in module yolean": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/yolean/7-SNAPSHOT/yolean-7-SNAPSHOT.jar in module yolean": return Duration.ofMillis(10);
+                            case "install of com/yahoo/vespa/yolean/7-SNAPSHOT/yolean-7-SNAPSHOT.pom in module yolean": return Duration.ofMillis(10);
+                            case "jar in module vespajlib": return Duration.ofMillis(82);
+                            case "jar in module yolean": return Duration.ofMillis(5);
+                            case "jar with dependencies in module vespajlib": return Duration.ofMillis(50);
+                            case "jar with dependencies in module yolean": return Duration.ofMillis(5);
+                            case "java archive in module testutil": return Duration.ofMillis(2);
+                            case "javadoc archive in module testutil": return Duration.ofMillis(28);
+                            case "javadoc archive in module vespajlib": return Duration.ofMillis(60);
+                            case "javadoc archive in module yolean": return Duration.ofMillis(29);
+                            case "osgi manifest in module vespajlib": return Duration.ofMillis(110);
+                            case "osgi manifest in module yolean": return Duration.ofMillis(322);
+                            case "source archive in module testutil": return Duration.ofMillis(28);
+                            case "source archive in module vespajlib": return Duration.ofMillis(55);
+                            case "source archive in module yolean": return Duration.ofMillis(29);
+                            case "source compilation in module testutil": return Duration.ofMillis(469);
+                            case "source compilation in module vespajlib": return Duration.ofMillis(1216);
+                            case "source compilation in module yolean": return Duration.ofMillis(627);
+                            case "source in module testutil": return Duration.ofMillis(0);
+                            case "source in module vespajlib": return Duration.ofMillis(0);
+                            case "source in module yolean": return Duration.ofMillis(0);
+                            case "test run in module testutil": return Duration.ofMillis(9);
+                            case "test run in module vespajlib": return Duration.ofMillis(1961);
+                            case "test run in module yolean": return Duration.ofMillis(230);
+                            case "test source compilation in module testutil": return Duration.ofMillis(73);
+                            case "test source compilation in module vespajlib": return Duration.ofMillis(1243);
+                            case "test source compilation in module yolean": return Duration.ofMillis(356);
+                        }
+
+                        throw new IllegalArgumentException("duration not known for: " + buildInfo.id().toString());
                         // TODO: Get this from earlier runs
-                        return Duration.ofMillis(100);
+                        // return Duration.ofMillis(100);
                     }
 
                     @Override

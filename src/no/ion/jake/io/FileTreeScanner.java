@@ -76,8 +76,9 @@ public class FileTreeScanner implements Build {
     public void build(BuildContext buildContext) {
         scan(buildContext);
         FileSet2 fileSet = new FileSet2(Map.copyOf(files));
-        buildContext.log().info("found " + files.size() + " " + name + " files");
-        buildContext.publish(fileSetArtifact, fileSet);
+        buildContext.newPublicationOf(fileSetArtifact)
+                .logWithDuration("found " + files.size() + " " + name + " files")
+                .publish(fileSet);
     }
 
     private static class IncludeSpec {

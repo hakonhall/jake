@@ -70,6 +70,12 @@ public class Graph<T> {
         return vertices.stream().filter(vertex -> vertex.dependencies().isEmpty()).collect(Collectors.toSet());
     }
 
+    /** Returns a graph identical to this, except with own vertices.  The payloads are identical. */
+    public Graph<T> duplicate() {
+        return new Graph<>(vertices);
+    }
+
+    /** Returns a graph with vertices created by transformer of the old vertices, and dependencies identical to this. */
     public <U> Graph<U> transform(NodeTransformer<T, U> transformer) {
         HashMap<Vertex<T>, Vertex<U>> newByOld = new HashMap<>(vertices.size());
 
